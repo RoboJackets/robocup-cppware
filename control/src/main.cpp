@@ -1,18 +1,32 @@
 #include <Arduino.h>
 
-// put function declarations here:
-int myFunction(int, int);
+#include <pins.hpp>
 
 void setup() {
-  // put your setup code here, to run once:
-  int result = myFunction(2, 3);
+  Serial.begin(115200);
+
+  // Initialize Motor Board //
+
+  pinMode(MOTOR_EN_PIN, OUTPUT);
+  digitalWrite(MOTOR_EN_PIN, HIGH);
+
+  pinMode(KILL_N_PIN, OUTPUT);
+  digitalWrite(KILL_N_PIN, HIGH);
+
+  pinMode(POWER_SWITCH_PIN, INPUT);
+  delay(15);
+
+  // TODO UART connections
+
+  // End Initialize Motor Board
+  
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
+  Serial.println("Loop :3");
+  if (digitalRead(POWER_SWITCH_PIN)) {
+    Serial.println("POWAAAA");
+  }
+  delay(100);
 }
 
-// put function definitions here:
-int myFunction(int x, int y) {
-  return x + y;
-}
