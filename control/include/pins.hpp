@@ -1,0 +1,15 @@
+// Pin map for teensy pinout
+// Try to keep up to date with ref doc https://docs.google.com/spreadsheets/d/1R4ADXmqaLGxfWDbyh1WTpnZDjxXoTz-bSd3AXz-UCJA/edit?usp=sharing
+
+#pragma once
+
+// Motor Board //
+#define MOTOR_EN_PIN 23
+#define KILL_N_PIN 36
+#define POWER_SWITCH_PIN 40
+
+// Team select //
+#define BOTSEL_PIN0 35
+#define BOTSEL_PIN1 34
+#define BOTSEL_PIN2 33
+#define BOTSEL_PIN3 32

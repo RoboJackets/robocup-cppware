@@ -1,0 +1,14 @@
+// Robot ID and color selector
+// Current implementation is 4 toggle switches 1-4 where 1 is color and 2-4 are ID with 4 as LSB
+
+#pragma once
+
+#include <Arduino.h>
+#include "types.hpp"
+#include "pins.hpp"
+
+void init_botsel();
+
+Team read_team();
+
+uint8_t read_id();
