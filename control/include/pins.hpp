@@ -13,3 +13,6 @@
 #define BOTSEL_PIN1 34
 #define BOTSEL_PIN2 33
 #define BOTSEL_PIN3 32
+
+// Kicker //
+#define KICKER_CSN_PIN 38

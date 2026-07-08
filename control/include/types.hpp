@@ -10,7 +10,7 @@ enum Motors {
     FR_MOTOR,
     BR_MOTOR,
     BL_MOTOR,
-    FL_MOTOR,
+    L_MOTOR,
     DRIBBLER,
     MOTOR_COUNT,
 };

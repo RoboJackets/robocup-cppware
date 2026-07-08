@@ -15,4 +15,6 @@ public:
     void send_command(int32_t setpoint);
 
     int32_t read_current_velocity();
+
+    int32_t send_and_read(int32_t setpoint);
 };

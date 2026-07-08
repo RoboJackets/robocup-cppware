@@ -1,10 +1,12 @@
 #include <Arduino.h>
+#include <SPI.h>
 
 #include "pins.hpp"
 #include "types.hpp"
 #include "config.hpp"
 #include "bot_select.hpp"
 #include "motors.hpp"
+#include "kicker.hpp"
 
 // Temp (probably) vars
 Team team;
@@ -19,6 +21,8 @@ MotorController motors[MOTOR_COUNT] = {
 };
 
 int32_t motor_velocities[MOTOR_COUNT] = {};
+
+SPISettings settings(2000000, MSBFIRST, SPI_MODE3);
 
 void kill_self();
 
@@ -40,7 +44,6 @@ void setup() {
   for (auto& motor : motors) {
     motor.begin();
   }
-  
   // End Initialize Motor Board
   
   // Initialize Bot Select //
@@ -48,12 +51,34 @@ void setup() {
   team = read_team();
   id = read_id();
   // End Initialize Bot Select //
+
+  // Initialize Kicker //
+  SPI1.begin();
+  pinMode(KICKER_CSN_PIN, OUTPUT);
+  digitalWrite(KICKER_CSN_PIN, HIGH);
+  // End Initialize Kicker //
 }
 
 // Main control loop
 void loop() {
   Serial.printf("Team: %d | ID: %d\n", team, id);
-    
+
+  KickerCommand new_command;
+  new_command.charge_allowed = true;
+  new_command.kick_strength = 5;
+  new_command.kick_trigger = Breakbeam;
+
+  SPI1.beginTransaction(settings);
+  digitalWrite(KICKER_CSN_PIN, LOW);
+
+  uint8_t response = SPI1.transfer(new_command.pack());
+
+  digitalWrite(KICKER_CSN_PIN, HIGH);
+  SPI1.endTransaction();
+
+  KickerState ks = KickerState(response);
+  Serial.println("KS: " + ks.to_string());
+
   delay(100);
 }
 
