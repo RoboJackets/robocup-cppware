@@ -16,3 +16,8 @@
 
 // Kicker //
 #define KICKER_CSN_PIN 38
+
+// Radio //
+#define RADIO_CSN_PIN 10
+#define RADIO_CE_PIN 41
+#define RADIO_IRQ_PIN 9

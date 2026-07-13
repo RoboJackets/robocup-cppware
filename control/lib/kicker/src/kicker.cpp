@@ -1,6 +1,6 @@
 #include "kicker.hpp"
 
-String kicktrigger_to_str(KickTrigger trigger) {
+String triggermode_to_str(TriggerMode trigger) {
     switch (trigger)
     {
     case Immediate:
@@ -12,7 +12,7 @@ String kicktrigger_to_str(KickTrigger trigger) {
     }
 }
 
-String kicktype_to_str(KickType type) {
+String shootmode_to_str(ShootMode type) {
     switch (type)
     {
     case Chip:

@@ -2,24 +2,24 @@
 
 #include <Arduino.h>
 
-enum KickType {
+enum ShootMode {
     Kick = 0,
     Chip = 1 << 7,
 };
 
-String kicktype_to_str(KickType type);
+String shootmode_to_str(ShootMode type);
 
-enum KickTrigger {
+enum TriggerMode {
     Disabled = 0b11 << 5,
     Breakbeam = 1 << 5,
     Immediate = 1 << 6,
 };
 
-String kicktrigger_to_str(KickTrigger trigger);
+String triggermode_to_str(TriggerMode trigger);
 
 struct KickerCommand {
-    KickType kick_type = Kick;
-    KickTrigger kick_trigger = Disabled;
+    ShootMode kick_type = Kick;
+    TriggerMode kick_trigger = Disabled;
     uint8_t kick_strength = 0;
     bool charge_allowed = false;
 
@@ -35,7 +35,7 @@ struct KickerCommand {
     }
 
     String to_string() {
-        return "Type: " + kicktype_to_str(kick_type) + " | Trigger: " + kicktrigger_to_str(kick_trigger) + " | Strength: " + String(kick_strength) + " | Charge Allowed: " + String(charge_allowed);
+        return "Type: " + shootmode_to_str(kick_type) + " | Trigger: " + triggermode_to_str(kick_trigger) + " | Strength: " + String(kick_strength) + " | Charge Allowed: " + String(charge_allowed);
     }
 };
 
