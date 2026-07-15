@@ -1,19 +1,5 @@
-#include <Arduino.h>
-#include <SPI.h>
-#include <U8g2lib.h>
-#include <RF24.h>
-#undef printf
-#include <ArduinoEigen.h>
+#include "main.hpp"
 using namespace Eigen;
-
-#include "pins.hpp"
-#include "types.hpp"
-#include "config.hpp"
-#include "bot_select.hpp"
-#include "motors.hpp"
-#include "kicker.hpp"
-#include "radio.hpp"
-#include "motion.hpp"
 
 /// Peripherals
 // Motors
@@ -36,19 +22,22 @@ RF24 radio(RADIO_CE_PIN, RADIO_CSN_PIN, 5000000);
 MotionControl motion_controller = MotionControl();
 
 /// Vars
+// Current robot status
 RobotStatusMessage status;
+// Current command to be executed
 ControlMessage control_message;
-int32_t motor_velocities[MOTOR_COUNT] = {};
+// # of times battery undervoltage detected
 uint8_t batt_uvlo_counter = 0;
+// Loop count
 uint32_t iteration = 0;
+// New command from radio interrupt
 volatile bool new_command = false;
-
-
-void kill_self();
-void receive_command();
+// Timestamp of last command
+uint32_t last_command = 0;
 
 void setup() {
   Serial.begin(115200);
+  // Wait 3 seconds or until serial connected
   while(!Serial.available() && millis() < 3000){delay(1);}
 
   // Initialize Motor Board //
@@ -111,10 +100,10 @@ void setup() {
 
 // Main control loop
 void loop() {
-
-  Vector3f body_velocities = control_message.get_velocity();
+  // Calculate wheel velocities, zero if past die time
+  Vector3f body_velocities = (millis() - last_command > DIE_TIME_MS ? Vector3f::Zero() : control_message.get_velocity());
   Vector4i wheel_velocities = motion_controller.body_to_wheels(body_velocities);
-  
+  // Send commands to motor controllers
   for (size_t i = 0; i < 4; i++) {
     motors[i].send_command(wheel_velocities(i));
   }
@@ -148,15 +137,17 @@ void loop() {
   // Read new command if available
   if (new_command) {
     if (DEBUG) Serial.println("New Command!");
+    // Clear flags for new interrupts
     new_command = false;
     radio.clearStatusFlags();
-
+    // Read command
     if (radio.available()) {
       uint8_t data[CONTROL_MESSAGE_SIZE];
       radio.read(&data, CONTROL_MESSAGE_SIZE);
+      // Overwrite current command with new command
       control_message.unpack(data);
       if (DEBUG) Serial.println(control_message.to_string());
-
+      // Send status response
       if (DEBUG) Serial.println("Sending response!");
       uint8_t response[ROBOT_STATUS_SIZE];
       status.pack(response);
@@ -167,27 +158,25 @@ void loop() {
       radio.setPayloadSize(CONTROL_MESSAGE_SIZE);
       radio.startListening();
     }
+    last_command = millis();
   }
   
-
+  // Update screen
   u8g2.clearBuffer();
   u8g2.setFont(u8g2_font_ncenB08_tr);
   char buf[32];
   snprintf(buf, sizeof(buf), "Team: %d | ID: %d", status.team, status.robot_id);
   u8g2.drawStr(0,10, buf);
-  // snprintf(buf, sizeof(buf), "Volt: %.2f | Per: %d", battery_voltage, status.battery_voltage);
-  // u8g2.drawStr(0,20, buf);
-  u8g2.sendBuffer();	
-  delay(1);
+  u8g2.sendBuffer();
 }
 
 // Safe robot shutdown ending with killing motor board
-// TODO: exchange for a flag and trigger in main loop
 void kill_self() {
   Serial.println("Killing Motor Board!");
   digitalWrite(KILLN_PIN, LOW);
 }
 
+// Radio interrupt
 void receive_command() {
   new_command = true;
 }

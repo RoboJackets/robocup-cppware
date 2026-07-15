@@ -9,3 +9,5 @@
 #define MAX_BATTERY_VOLTAGE 2.69
 // Number of times the battery voltage can be measured under min before suicide
 #define BATT_UVLO_THRESHOLD 10
+// Amount of time robot should keep moving without new command
+#define DIE_TIME_MS 1000
