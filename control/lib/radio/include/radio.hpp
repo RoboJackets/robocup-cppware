@@ -1,8 +1,19 @@
 #pragma once
 
+#include <Arduino.h>
+#include <ArduinoEigen.h>
+using namespace Eigen;
+
+#include "types.hpp"
+#include "kicker.hpp"
+
 #define CHANNEL 106
 #define CONTROL_MESSAGE_SIZE 10
 #define ROBOT_STATUS_SIZE 3
+
+/// The body{X, Y, W} are multiplied (upon sending) by the VELOCITY_SCALE_FACTOR and divided
+/// (upon receiving) to preserve at least 3 decimals of floating point precision.
+#define VELOCITY_SCALE_FACTOR 1000.0f
 
 /// The different possible base stations.
 /// 
@@ -54,16 +65,7 @@ struct RobotStatusMessage {
     // Status of FPGA
     bool fpga_status = false;
 
-    void pack(uint8_t (&pkg)[ROBOT_STATUS_SIZE]) {
-        pkg[0] |= team;
-        pkg[0] |= (robot_id & 0b1111) << 3;
-        pkg[0] |= ball_sense_status << 2;
-        pkg[0] |= kick_status << 1;
-        pkg[0] |= kick_healthy;
-        pkg[1] = battery_voltage;
-        pkg[2] |= (motor_errors & 0b11111) << 3;
-        pkg[2] |= fpga_status << 2;
-    }
+    void pack(uint8_t (&pkg)[ROBOT_STATUS_SIZE]);
 };
 
 struct ControlMessage {
@@ -90,25 +92,7 @@ struct ControlMessage {
     // Mode, 0 is normal, rest are for debug
     uint8_t mode = 0;
 
-    void unpack(uint8_t (&data)[CONTROL_MESSAGE_SIZE]) {
-        team = ((data[0] & (0b1 << 7)) ? Team::Yellow : Team::Blue);
-        robot_id = (data[0] & (0b1111 << 3)) >> 3;
-        shoot_mode = ((data[0] & 0b1 << 2) ? ShootMode::Chip : ShootMode::Kick);
-        switch (data[0] & 0b11) {
-            case 1: trigger_mode = TriggerMode::Immediate; break;
-            case 2: trigger_mode = TriggerMode::Breakbeam; break;
-            default: trigger_mode = TriggerMode::Disabled; break;
-        }
-        body_x = data[1] | (data[2] << 8);
-        body_y = data[3] | (data[4] << 8);
-        body_w = data[5] | (data[6] << 8);
-        dribbler_speed = data[7];
-        kick_strength = data[8];
-        role = (data[9] & (0b11 << 6)) >> 6;
-        mode = (data[9] & 0b00111111);
-    }
-
-    String to_string() {
-        return "Team: " + String((team == Blue ? "Blue" : "Yellow")) + String(" | ID: ") + robot_id + " | Shoot Mode: " + shootmode_to_str(shoot_mode) + " | Trigger Mode: " + triggermode_to_str(trigger_mode) + " | X: " + body_x + " | Y: " + body_y + " | W: " + body_w + " | Dribbler Speed: " + dribbler_speed + " | Kick Strength " + kick_strength + " | Role: " + role + " | Mode: " + mode;
-    }
+    void unpack(uint8_t (&data)[CONTROL_MESSAGE_SIZE]);
+    Vector3f get_velocity();
+    String to_string();
 };
