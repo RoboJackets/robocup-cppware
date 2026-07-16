@@ -35,11 +35,8 @@ volatile bool new_command = false;
 // Timestamp of last command
 uint32_t last_command = 0;
 
-void setup() {
-  Serial.begin(115200);
-  // Wait 3 seconds or until serial connected
-  while(!Serial.available() && millis() < 3000){delay(1);}
 
+void setup() {
   // Initialize Motor Board //
   pinMode(MOTOR_EN_PIN, OUTPUT);
   digitalWrite(MOTOR_EN_PIN, HIGH);
@@ -56,20 +53,28 @@ void setup() {
     motor.begin();
   }
   // End Initialize Motor Board
-  
-  // Initialize Bot Select //
-  init_botsel();
-  status.team = read_team();
-  status.robot_id = read_id();
-  // End Initialize Bot Select //
 
   // Initialize Kicker //
+  // Non default MISO assignment
+  SPI1.setMISO(KICKER_MISO_PIN);
   SPI1.begin();
   pinMode(KICKER_CSN_PIN, OUTPUT);
   digitalWrite(KICKER_CSN_PIN, HIGH);
   pinMode(KICKER_RESETN_PIN, OUTPUT);
   digitalWrite(KICKER_RESETN_PIN, HIGH);
   // End Initialize Kicker //
+
+  // Initialize Serial //
+  Serial.begin(115200);
+  // Wait 3 seconds or until serial connected
+  while(!Serial.available() && millis() < 3000){delay(1);}
+  // End Initialize Serial //
+  
+  // Initialize Bot Select //
+  init_botsel();
+  status.team = read_team();
+  status.robot_id = read_id();
+  // End Initialize Bot Select //
 
   // Initialize Screen //
   u8g2.begin();
@@ -78,7 +83,7 @@ void setup() {
   // Initialize radio //
   if(!radio.begin()) {
     Serial.println("Radio Init Failure!");
-    while (1);
+    error_handler(RadioError);
   }
 
   // Tie interrupt to radio receive
@@ -100,38 +105,56 @@ void setup() {
 
 // Main control loop
 void loop() {
+  // Check for radio timeout
+  bool radio_timeout = millis() - last_command > DIE_TIME_MS;
+
+  // Poll battery voltage
+  uint16_t raw_batt = analogRead(BATTERY_SENSE_PIN);
+  float battery_voltage = raw_batt * 3.3 / 1023.0;
+  if (DEBUG) Serial.printf("Battery Voltage: %.2f\n", battery_voltage);
+  // Maximum Voltage of batteries is roughly 2.69, so we're making a random linear interpolation between the max and min voltage
+  status.battery_voltage = int((battery_voltage - MIN_BATTERY_VOLTAGE) / (MAX_BATTERY_VOLTAGE - MIN_BATTERY_VOLTAGE) * 100);
+  if (DEBUG) Serial.printf("Battery Percent: %d\n", status.battery_voltage);
+  // Shut down if battery voltage too low
+  if (battery_voltage < MIN_BATTERY_VOLTAGE) {
+    batt_uvlo_counter++;
+    if (batt_uvlo_counter > BATT_UVLO_THRESHOLD) {
+      Serial.println("Undervoltage Detected!");
+      kill_self();
+    }
+  }
+
   // Calculate wheel velocities, zero if past die time
-  Vector3f body_velocities = (millis() - last_command > DIE_TIME_MS ? Vector3f::Zero() : control_message.get_velocity());
+  Vector3f body_velocities = (radio_timeout ? Vector3f::Zero() : control_message.get_velocity());
   Vector4i wheel_velocities = motion_controller.body_to_wheels(body_velocities);
   // Send commands to motor controllers
   for (size_t i = 0; i < 4; i++) {
     motors[i].send_command(wheel_velocities(i));
   }
-
-
-
-  // // Poll battery voltage
-  // float battery_voltage = analogRead(BATTERY_SENSE_PIN) * 3.3 / 1023.0;
-  // if (DEBUG) Serial.printf("Battery Voltage: %.2f\n", battery_voltage);
-  // // Maximum Voltage of batteries is roughly 2.69, so we're making a random
-  // // linear interpolation between the max and min voltage
-  // status.battery_voltage = int((battery_voltage - MIN_BATTERY_VOLTAGE) / (MAX_BATTERY_VOLTAGE - MIN_BATTERY_VOLTAGE) * 100);
-  // // Shut down if battery voltage too low
-  // if (battery_voltage < MIN_BATTERY_VOLTAGE) {
-  //   batt_uvlo_counter++;
-  //   if (batt_uvlo_counter > BATT_UVLO_THRESHOLD) kill_self();
-  // }
+  if (DEBUG) Serial.printf("Moving at (%d, %d, %d, %d)\n", wheel_velocities(0), wheel_velocities(1), wheel_velocities(2), wheel_velocities(3));
 
   
-
-  // KickerCommand kcommand;
-  // SPI1.beginTransaction(settings);
-  // digitalWrite(KICKER_CSN_PIN, LOW);
-  // uint8_t response = SPI1.transfer(kcommand.pack());
-  // digitalWrite(KICKER_CSN_PIN, HIGH);
-  // SPI1.endTransaction();
-  // Serial.print("Kicker Response: ");
-  // Serial.println(KickerState(response).to_string());
+  /// Service the kicker
+  // Construct command 
+  KickerCommand kcommand;
+  // Disallow charging on radio timeout
+  kcommand.charge_allowed = !radio_timeout;
+  kcommand.kick_strength = control_message.kick_strength;
+  kcommand.trigger_mode = control_message.trigger_mode;
+  kcommand.shoot_mode = control_message.shoot_mode;
+  // Send command
+  SPI1.beginTransaction(settings);
+  digitalWrite(KICKER_CSN_PIN, LOW);
+  uint8_t response = SPI1.transfer(kcommand.pack());
+  digitalWrite(KICKER_CSN_PIN, HIGH);
+  SPI1.endTransaction();
+  // Process response
+  KickerState kstate = KickerState(response);
+  status.kick_healthy = kstate.healthy;
+  status.ball_sense_status = kstate.ball_sensed;
+  if (!status.kick_healthy) error_handler(KickerError);
+  if (DEBUG) Serial.print("Kicker Response: ");
+  if (DEBUG) Serial.println(kstate.to_string());
 
 
   // Read new command if available
@@ -180,3 +203,32 @@ void kill_self() {
 void receive_command() {
   new_command = true;
 }
+
+// Universal error handler
+void error_handler(RobotError e) {
+  // Stop motors
+  for (auto& motor : motors) {
+    motor.send_command(0);
+  }
+  // Stop kicker
+  SPI1.beginTransaction(settings);
+  digitalWrite(KICKER_CSN_PIN, LOW);
+  uint8_t _ = SPI1.transfer(KickerCommand().pack());
+  digitalWrite(KICKER_CSN_PIN, HIGH);
+  SPI1.endTransaction();
+
+  // Error specific handling
+  switch (e) {
+    case RadioError:
+
+    break;
+    case KickerError:
+
+    break;
+    default:
+
+    break;
+  }
+  // Unrecoverable by default
+  while(1) {delay(1);}
+} 

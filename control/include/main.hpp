@@ -19,3 +19,4 @@
 
 void kill_self();
 void receive_command();
+void error_handler(RobotError);

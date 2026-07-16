@@ -15,6 +15,7 @@
 #define BOTSEL_PIN3 32
 
 // Kicker //
+#define KICKER_MISO_PIN 39
 #define KICKER_CSN_PIN 38
 #define KICKER_RESETN_PIN 37
 

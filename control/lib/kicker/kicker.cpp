@@ -24,8 +24,8 @@ String shootmode_to_str(ShootMode type) {
 
 uint8_t KickerCommand::pack() {
     uint8_t command = 0;
-    command |= kick_type;
-    command |= kick_trigger;
+    command |= shoot_mode;
+    command |= trigger_mode;
     command |= kick_strength & 0xF;
     if (charge_allowed) {
         command |= 1 << 4;
@@ -34,7 +34,7 @@ uint8_t KickerCommand::pack() {
 }
 
 String KickerCommand::to_string() {
-    return "Type: " + shootmode_to_str(kick_type) + " | Trigger: " + triggermode_to_str(kick_trigger) + " | Strength: " + String(kick_strength) + " | Charge Allowed: " + String(charge_allowed);
+    return "Type: " + shootmode_to_str(shoot_mode) + " | Trigger: " + triggermode_to_str(trigger_mode) + " | Strength: " + String(kick_strength) + " | Charge Allowed: " + String(charge_allowed);
 }
 
 

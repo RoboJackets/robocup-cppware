@@ -14,3 +14,10 @@ enum Motors {
     DRIBBLER,
     MOTOR_COUNT,
 };
+
+enum RobotError {
+    NoError,
+    RadioError,
+    KickerError,
+    
+};

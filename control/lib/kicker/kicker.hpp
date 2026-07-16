@@ -18,8 +18,8 @@ enum TriggerMode {
 String triggermode_to_str(TriggerMode trigger);
 
 struct KickerCommand {
-    ShootMode kick_type = Kick;
-    TriggerMode kick_trigger = Disabled;
+    ShootMode shoot_mode = Kick;
+    TriggerMode trigger_mode = Disabled;
     uint8_t kick_strength = 0;
     bool charge_allowed = false;
 
@@ -35,3 +35,5 @@ struct KickerState {
     KickerState(uint8_t);
     String to_string();
 };
+
+uint8_t service_kicker(KickerCommand);
