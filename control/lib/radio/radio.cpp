@@ -6,7 +6,7 @@ void RobotStatusMessage::pack(uint8_t (&pkg)[ROBOT_STATUS_SIZE]) {
     pkg[0] |= ball_sense_status << 2;
     pkg[0] |= kick_status << 1;
     pkg[0] |= kick_healthy;
-    pkg[1] = battery_voltage;
+    pkg[1] = battery_percent;
     pkg[2] |= (motor_errors & 0b11111) << 3;
     pkg[2] |= fpga_status << 2;
 }

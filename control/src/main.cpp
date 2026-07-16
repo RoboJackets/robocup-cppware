@@ -1,5 +1,4 @@
 #include "main.hpp"
-using namespace Eigen;
 
 /// Peripherals
 // Motors
@@ -32,7 +31,7 @@ uint8_t batt_uvlo_counter = 0;
 uint32_t iteration = 0;
 // New command from radio interrupt
 volatile bool new_command = false;
-// Timestamp of last command
+// Timestamp of last command to check radio timeout
 uint32_t last_command = 0;
 
 
@@ -113,8 +112,8 @@ void loop() {
   float battery_voltage = raw_batt * 3.3 / 1023.0;
   if (DEBUG) Serial.printf("Battery Voltage: %.2f\n", battery_voltage);
   // Maximum Voltage of batteries is roughly 2.69, so we're making a random linear interpolation between the max and min voltage
-  status.battery_voltage = int((battery_voltage - MIN_BATTERY_VOLTAGE) / (MAX_BATTERY_VOLTAGE - MIN_BATTERY_VOLTAGE) * 100);
-  if (DEBUG) Serial.printf("Battery Percent: %d\n", status.battery_voltage);
+  status.battery_percent = int((battery_voltage - MIN_BATTERY_VOLTAGE) / (MAX_BATTERY_VOLTAGE - MIN_BATTERY_VOLTAGE) * 100);
+  if (DEBUG) Serial.printf("Battery Percent: %d\n", status.battery_percent);
   // Shut down if battery voltage too low
   if (battery_voltage < MIN_BATTERY_VOLTAGE) {
     batt_uvlo_counter++;

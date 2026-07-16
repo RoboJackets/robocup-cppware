@@ -6,6 +6,7 @@
 #include <RF24.h>
 #undef printf
 #include <ArduinoEigen.h>
+using namespace Eigen;
 
 #include "pins.hpp"
 #include "types.hpp"

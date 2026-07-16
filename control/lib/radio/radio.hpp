@@ -58,8 +58,8 @@ struct RobotStatusMessage {
     bool kick_status = false;
     // Health of kicker
     bool kick_healthy = false;
-    // Voltage measured
-    uint8_t battery_voltage = 0;
+    // Percent battery 0-100
+    uint8_t battery_percent = 0;
     // Motor errors
     uint8_t motor_errors = 0;
     // Status of FPGA
