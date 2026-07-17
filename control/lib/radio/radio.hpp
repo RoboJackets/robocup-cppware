@@ -7,27 +7,30 @@ using namespace Eigen;
 #include "types.hpp"
 #include "kicker.hpp"
 
+// Radio channel to be used by NRF24
 #define CHANNEL 106
+// Size of control messages from base station
 #define CONTROL_MESSAGE_SIZE 10
+// Size of robot response message
 #define ROBOT_STATUS_SIZE 3
 
-/// The body{X, Y, W} are multiplied (upon sending) by the VELOCITY_SCALE_FACTOR and divided
-/// (upon receiving) to preserve at least 3 decimals of floating point precision.
+// The body{X, Y, W} are multiplied (upon sending) by the VELOCITY_SCALE_FACTOR and divided
+// (upon receiving) to preserve at least 3 decimals of floating point precision.
 #define VELOCITY_SCALE_FACTOR 1000.0f
 
-/// The different possible base stations.
-/// 
-/// BASE_STATION_ADDRESSES[0] = Blue Team
-/// BASE_STATION_ADDRESSES[1] = Yellow Team
+// The different possible base stations.
+// 
+// BASE_STATION_ADDRESSES[0] = Blue Team
+// BASE_STATION_ADDRESSES[1] = Yellow Team
 static const unsigned char BASE_STATION_ADDRESSES[2][5] = {
     {0xE7, 0xE7, 0xE7, 0xE7, 0xE7},
     {0xA4, 0xA4, 0xA4, 0xA4, 0xA4},
 };
 
-/// The address for each robot
-/// 
-/// ROBOT_RADIO_ADDRESSES[0][X] = Blue Team Robot X Address
-/// ROBOT_RADIO_ADDRESSES[1][X] = Yellow Team Robot X Address
+// The address for each robot
+// 
+// ROBOT_RADIO_ADDRESSES[0][X] = Blue Team Robot X Address
+// ROBOT_RADIO_ADDRESSES[1][X] = Yellow Team Robot X Address
 static const unsigned char ROBOT_RADIO_ADDRESSES[2][6][5] = {
     {
         {0xC3, 0xC3, 0xC3, 0xC3, 0xC1},
@@ -65,6 +68,8 @@ struct RobotStatusMessage {
     // Status of FPGA
     bool fpga_status = false;
 
+    /// @brief Pack status into SPI format for radio
+    /// @param pkg Buffer to pack status into, must be of ROBOT_STATUS_SIZE size
     void pack(uint8_t (&pkg)[ROBOT_STATUS_SIZE]);
 };
 
@@ -92,7 +97,13 @@ struct ControlMessage {
     // Mode, 0 is normal, rest are for debug
     uint8_t mode = 0;
 
+    /// @brief Update control message values from radio SPI control message
+    /// @param data Raw data from radio
     void unpack(uint8_t (&data)[CONTROL_MESSAGE_SIZE]);
+    /// @brief Formats velocity data from control message
+    /// @return Properly formatted velocities
     Vector3f get_velocity();
+    /// @brief Converts control message into a readible String format
+    /// @return String representation of control message
     String to_string();
 };

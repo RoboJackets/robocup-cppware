@@ -1,8 +1,9 @@
 #pragma once
 
 #include <ArduinoEigen.h>
-
 using namespace Eigen;
+
+// TODO: Redo docs from rust version
 
 /// Physical dimensions
 // Wheel radius (m)

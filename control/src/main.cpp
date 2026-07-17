@@ -104,6 +104,7 @@ void setup() {
 
 // Main control loop
 void loop() {
+  uint32_t loop_start = millis();
   // Check for radio timeout
   bool radio_timeout = millis() - last_command > DIE_TIME_MS;
 
@@ -115,13 +116,13 @@ void loop() {
   status.battery_percent = int((battery_voltage - MIN_BATTERY_VOLTAGE) / (MAX_BATTERY_VOLTAGE - MIN_BATTERY_VOLTAGE) * 100);
   if (DEBUG) Serial.printf("Battery Percent: %d\n", status.battery_percent);
   // Shut down if battery voltage too low
-  if (battery_voltage < MIN_BATTERY_VOLTAGE) {
-    batt_uvlo_counter++;
-    if (batt_uvlo_counter > BATT_UVLO_THRESHOLD) {
-      Serial.println("Undervoltage Detected!");
-      kill_self();
-    }
-  }
+  // if (battery_voltage < MIN_BATTERY_VOLTAGE) {
+  //   batt_uvlo_counter++;
+  //   if (batt_uvlo_counter > BATT_UVLO_THRESHOLD) {
+  //     Serial.println("Undervoltage Detected!");
+  //     kill_self();
+  //   }
+  // }
 
   // Calculate wheel velocities, zero if past die time
   Vector3f body_velocities = (radio_timeout ? Vector3f::Zero() : control_message.get_velocity());
@@ -130,7 +131,8 @@ void loop() {
   for (size_t i = 0; i < 4; i++) {
     motors[i].send_command(wheel_velocities(i));
   }
-  if (DEBUG) Serial.printf("Moving at (%d, %d, %d, %d)\n", wheel_velocities(0), wheel_velocities(1), wheel_velocities(2), wheel_velocities(3));
+  Serial.printf("Body Velocities: (%.3f, %.3f, %.3f)\n", body_velocities(0), body_velocities(1), body_velocities(2));
+  Serial.printf("Wheel Velocities: (%d, %d, %d, %d)\n", wheel_velocities(0), wheel_velocities(1), wheel_velocities(2), wheel_velocities(3));
 
   
   /// Service the kicker
@@ -151,7 +153,7 @@ void loop() {
   KickerState kstate = KickerState(response);
   status.kick_healthy = kstate.healthy;
   status.ball_sense_status = kstate.ball_sensed;
-  if (!status.kick_healthy) error_handler(KickerError);
+  // if (!status.kick_healthy) error_handler(KickerError);
   if (DEBUG) Serial.print("Kicker Response: ");
   if (DEBUG) Serial.println(kstate.to_string());
 
@@ -180,16 +182,31 @@ void loop() {
       radio.setPayloadSize(CONTROL_MESSAGE_SIZE);
       radio.startListening();
     }
+    // Trash first radio movement command after timeout to prevent jolts
+    // TODO: better test if needed, edge case possible
+    if (radio_timeout) {
+      control_message.body_x = 0;
+      control_message.body_y = 0;
+      control_message.body_w = 0;
+    }
     last_command = millis();
   }
   
   // Update screen
-  u8g2.clearBuffer();
-  u8g2.setFont(u8g2_font_ncenB08_tr);
-  char buf[32];
-  snprintf(buf, sizeof(buf), "Team: %d | ID: %d", status.team, status.robot_id);
-  u8g2.drawStr(0,10, buf);
-  u8g2.sendBuffer();
+  // TODO: Fix time this takes
+  // One write taking 36ms is unnacceptable and causes issues with motors when run every cycle
+  // Could possible still be causing unseen jitters with motors as is
+  if (iteration % 50 == 0) {
+    u8g2.clearBuffer();
+    u8g2.setFont(u8g2_font_ncenB08_tr);
+    char buf[32];
+    snprintf(buf, sizeof(buf), "Team: %d | ID: %d", status.team, status.robot_id);
+    u8g2.drawStr(0,10, buf);
+    u8g2.sendBuffer();
+  }  
+  
+  iteration++;
+  if (DEBUG) Serial.printf("Loop time: %lums\n", millis() - loop_start);
 }
 
 // Safe robot shutdown ending with killing motor board
@@ -219,10 +236,10 @@ void error_handler(RobotError e) {
   // Error specific handling
   switch (e) {
     case RadioError:
-
+      while(1) {Serial.println("RADIO ERROR"); delay(500);}
     break;
     case KickerError:
-
+      while(1) {Serial.println("KICKER ERROR"); delay(500);}
     break;
     default:
 

@@ -12,7 +12,7 @@ void tearDown(void) {
 void test_addition() {
     uint8_t a = 1;
     uint8_t b = 1;
-    TEST_ASSERT_TRUE(a == b);
+    TEST_ASSERT_TRUE(a + b == 2);
 }
 
 int main( int argc, char **argv) {

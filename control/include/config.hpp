@@ -1,6 +1,6 @@
 #pragma once
 
-#define DEBUG 1
+#define DEBUG 0
 
 /// Battery safety checks
 // At 2.372V, our batteries have depleted to 18.5V (see voltage divider in schematics)
@@ -11,3 +11,5 @@
 #define BATT_UVLO_THRESHOLD 10
 // Amount of time robot should keep moving without new command
 #define DIE_TIME_MS 1000
+
+#define CONTROL_FREQ_MS 1000 / 60
