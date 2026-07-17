@@ -16,8 +16,9 @@ using namespace Eigen;
 #include "kicker.hpp"
 #include "radio.hpp"
 #include "motion.hpp"
+#include "screen.hpp"
 
-
+void power_switch_interrupt();
 void kill_self();
 void receive_command();
 void error_handler(RobotError);

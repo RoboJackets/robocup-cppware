@@ -33,6 +33,10 @@ uint32_t iteration = 0;
 volatile bool new_command = false;
 // Timestamp of last command to check radio timeout
 uint32_t last_command = 0;
+// Kicker voltage
+uint8_t kicker_voltage = 0;
+// Screen select
+uint8_t screen_select = 0;
 
 
 void setup() {
@@ -63,10 +67,20 @@ void setup() {
   digitalWrite(KICKER_RESETN_PIN, HIGH);
   // End Initialize Kicker //
 
+  // Initialize Screen //
+  u8g2.begin();
+  // End Initialize Screen //
+
   // Initialize Serial //
   Serial.begin(115200);
   // Wait 3 seconds or until serial connected
-  while(!Serial.available() && millis() < 3000){delay(1);}
+  for (int i = 0; i < 3; i++) {
+    if (Serial.available()) break;
+    u8g2.clearBuffer();
+    draw_startup(&u8g2, i + 1);
+    u8g2.sendBuffer();
+    delay(1000);
+  }
   // End Initialize Serial //
   
   // Initialize Bot Select //
@@ -74,10 +88,6 @@ void setup() {
   status.team = read_team();
   status.robot_id = read_id();
   // End Initialize Bot Select //
-
-  // Initialize Screen //
-  u8g2.begin();
-  // End Initialize Screen //
 
   // Initialize radio //
   if(!radio.begin()) {
@@ -108,17 +118,6 @@ void loop() {
   // Check for radio timeout
   bool radio_timeout = millis() - last_command > DIE_TIME_MS;
 
-  // while(true) {
-  //   for(int i = 0; i < motion_controller.bot_to_wheel.rows(); i++) {
-  //       for (int j = 0; j < motion_controller.bot_to_wheel.cols(); j++) {
-  //           Serial.printf("%.8f\t", motion_controller.bot_to_wheel(i, j));
-  //       }
-  //       Serial.println();
-  //   }
-  //   Serial.println("============================");
-  //   delay(500);
-  // }
-
   // Poll battery voltage
   uint16_t raw_batt = analogRead(BATTERY_SENSE_PIN);
   float battery_voltage = raw_batt * 3.3 / 1023.0;
@@ -127,27 +126,25 @@ void loop() {
   status.battery_percent = int((battery_voltage - MIN_BATTERY_VOLTAGE) / (MAX_BATTERY_VOLTAGE - MIN_BATTERY_VOLTAGE) * 100);
   if (DEBUG) Serial.printf("Battery Percent: %d\n", status.battery_percent);
   // Shut down if battery voltage too low
-  // if (battery_voltage < MIN_BATTERY_VOLTAGE) {
-  //   batt_uvlo_counter++;
-  //   if (batt_uvlo_counter > BATT_UVLO_THRESHOLD) {
-  //     Serial.println("Undervoltage Detected!");
-  //     kill_self();
-  //   }
-  // }
+  if (battery_voltage < MIN_BATTERY_VOLTAGE) {
+    batt_uvlo_counter++;
+    if (batt_uvlo_counter > BATT_UVLO_THRESHOLD) {
+      Serial.println("Undervoltage Detected!");
+      kill_self();
+    }
+  }
 
   // Calculate wheel velocities, zero if past die time
   Vector3f body_velocities = (radio_timeout ? Vector3f::Zero() : control_message.get_velocity());
   Vector4i wheel_velocities = motion_controller.body_to_wheels(body_velocities);
   // Send commands to motor controllers
-  // for (size_t i = 0; i < 4; i++) {
-  //   motors[i].send_and_read(wheel_velocities(i));
-  // }
+  // TODO: Find real source of order reversal
   motors[0].send_and_read(wheel_velocities(3));
   motors[1].send_and_read(wheel_velocities(2));
   motors[2].send_and_read(wheel_velocities(1));
   motors[3].send_and_read(wheel_velocities(0));
-  Serial.printf("Body Velocities: (%.3f, %.3f, %.3f)\n", body_velocities(0), body_velocities(1), body_velocities(2));
-  Serial.printf("Wheel Velocities: (%d, %d, %d, %d)\n", wheel_velocities(0), wheel_velocities(1), wheel_velocities(2), wheel_velocities(3));
+  if (DEBUG) Serial.printf("Body Velocities: (%.3f, %.3f, %.3f)\n", body_velocities(0), body_velocities(1), body_velocities(2));
+  if (DEBUG) Serial.printf("Wheel Velocities: (%d, %d, %d, %d)\n", wheel_velocities(0), wheel_velocities(1), wheel_velocities(2), wheel_velocities(3));
 
   
   /// Service the kicker
@@ -168,6 +165,7 @@ void loop() {
   KickerState kstate = KickerState(response);
   status.kick_healthy = kstate.healthy;
   status.ball_sense_status = kstate.ball_sensed;
+  kicker_voltage = kstate.current_voltage;
   // if (!status.kick_healthy) error_handler(KickerError);
   if (DEBUG) Serial.print("Kicker Response: ");
   if (DEBUG) Serial.println(kstate.to_string());
@@ -189,6 +187,8 @@ void loop() {
       // Send status response
       if (DEBUG) Serial.println("Sending response!");
       uint8_t response[ROBOT_STATUS_SIZE];
+      // Immediate confirmation response
+      status.kick_status = control_message.trigger_mode != Disabled;
       status.pack(response);
       radio.stopListening();
       radio.setPayloadSize(ROBOT_STATUS_SIZE);
@@ -200,6 +200,7 @@ void loop() {
     // Trash first radio movement command after timeout to prevent jolts
     // TODO: better test if needed, edge case possible
     if (radio_timeout) {
+      if (DEBUG) Serial.printf("Trashed Packet: X: %d | Y: %d | W: %d\n", control_message.body_x, control_message.body_y, control_message.body_w);
       control_message.body_x = 0;
       control_message.body_y = 0;
       control_message.body_w = 0;
@@ -208,17 +209,25 @@ void loop() {
   }
   
   // Update screen
+  // TODO: Maybe better idea than cycling between the two screens
+  // however it is currently built out to accept more
   // TODO: Fix time this takes
   // One write taking 36ms is unnacceptable and causes issues with motors when run every cycle
   // Could possible still be causing unseen jitters with motors as is
+  if (iteration % 10000 == 0) {
+    screen_select++;
+    if (screen_select > 1) screen_select = 0;
+  }
   if (iteration % 500 == 0) {
     u8g2.clearBuffer();
-    u8g2.setFont(u8g2_font_ncenB08_tr);
-    char buf[32];
-    snprintf(buf, sizeof(buf), "Team: %d | ID: %d", status.team, status.robot_id);
-    u8g2.drawStr(0,10, buf);
+    draw_header(&u8g2, status);
+    if (screen_select == 0) {
+      draw_colors(&u8g2, status.team, status.robot_id);
+    } else {
+      draw_info(&u8g2, status, !radio_timeout, kicker_voltage);
+    }
     u8g2.sendBuffer();
-  }  
+  }
   
   iteration++;
   if (DEBUG) Serial.printf("Loop time: %lums\n", millis() - loop_start);
@@ -226,6 +235,12 @@ void loop() {
 
 // Safe robot shutdown ending with killing motor board
 void kill_self() {
+  // Stop motors
+  Serial.println("Stopping motors!");
+  for (auto& motor : motors) {
+    motor.send_command(0);
+  }
+  // Kill Power
   Serial.println("Killing Motor Board!");
   digitalWrite(KILLN_PIN, LOW);
 }
