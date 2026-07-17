@@ -196,7 +196,7 @@ void loop() {
   // TODO: Fix time this takes
   // One write taking 36ms is unnacceptable and causes issues with motors when run every cycle
   // Could possible still be causing unseen jitters with motors as is
-  if (iteration % 50 == 0) {
+  if (iteration % 500 == 0) {
     u8g2.clearBuffer();
     u8g2.setFont(u8g2_font_ncenB08_tr);
     char buf[32];
