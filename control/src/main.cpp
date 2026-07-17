@@ -108,6 +108,17 @@ void loop() {
   // Check for radio timeout
   bool radio_timeout = millis() - last_command > DIE_TIME_MS;
 
+  // while(true) {
+  //   for(int i = 0; i < motion_controller.bot_to_wheel.rows(); i++) {
+  //       for (int j = 0; j < motion_controller.bot_to_wheel.cols(); j++) {
+  //           Serial.printf("%.8f\t", motion_controller.bot_to_wheel(i, j));
+  //       }
+  //       Serial.println();
+  //   }
+  //   Serial.println("============================");
+  //   delay(500);
+  // }
+
   // Poll battery voltage
   uint16_t raw_batt = analogRead(BATTERY_SENSE_PIN);
   float battery_voltage = raw_batt * 3.3 / 1023.0;
@@ -128,9 +139,13 @@ void loop() {
   Vector3f body_velocities = (radio_timeout ? Vector3f::Zero() : control_message.get_velocity());
   Vector4i wheel_velocities = motion_controller.body_to_wheels(body_velocities);
   // Send commands to motor controllers
-  for (size_t i = 0; i < 4; i++) {
-    motors[i].send_command(wheel_velocities(i));
-  }
+  // for (size_t i = 0; i < 4; i++) {
+  //   motors[i].send_and_read(wheel_velocities(i));
+  // }
+  motors[0].send_and_read(wheel_velocities(3));
+  motors[1].send_and_read(wheel_velocities(2));
+  motors[2].send_and_read(wheel_velocities(1));
+  motors[3].send_and_read(wheel_velocities(0));
   Serial.printf("Body Velocities: (%.3f, %.3f, %.3f)\n", body_velocities(0), body_velocities(1), body_velocities(2));
   Serial.printf("Wheel Velocities: (%d, %d, %d, %d)\n", wheel_velocities(0), wheel_velocities(1), wheel_velocities(2), wheel_velocities(3));
 

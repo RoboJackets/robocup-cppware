@@ -30,6 +30,6 @@ int32_t MotorController::read_current_velocity() {
 
 int32_t MotorController::send_and_read(int32_t setpoint) {
     send_command(setpoint);
-    delayMicroseconds(200); // Small delay to allow velocity data to be packed, check if needed/can be safely replaced with serial available check
+    // Small delay to allow velocity data to be packed, check if needed/can be safely replaced with serial available check
     return read_current_velocity();
 }

@@ -10,7 +10,7 @@ using namespace Eigen;
 #define WHEEL_RADIUS 0.02786
 #define REAR_WHEEL_DIST 0.077874
 #define FRONT_WHEEL_DIST 0.078089
-#define WHEEL_DIST (FRONT_WHEEL_DIST - REAR_WHEEL_DIST) / 2.0
+#define WHEEL_DIST (FRONT_WHEEL_DIST + REAR_WHEEL_DIST) / 2.0
 #define FRONT_ANGLE 30.0
 #define BACK_ANGLE 45.0
 // The number of encoder ticks per rotation (Wheels have a gear ration of 1:3 and encoders have 2048 counts per rotation)
