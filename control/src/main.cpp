@@ -151,9 +151,9 @@ void loop() {
   read_velocities(2) = motors[1].send_and_read(wheel_velocities(2));
   read_velocities(1) = motors[2].send_and_read(wheel_velocities(1));
   read_velocities(0) = motors[3].send_and_read(wheel_velocities(0));
-  Serial.printf("Body Velocities: (%.3f, %.3f, %.3f)\n", body_velocities(0), body_velocities(1), body_velocities(2));
-  Serial.printf("Wheel Velocities: (%d, %d, %d, %d)\n", wheel_velocities(0), wheel_velocities(1), wheel_velocities(2), wheel_velocities(3));
-  Serial.printf("Read Velocities: (%d, %d, %d, %d)\n", read_velocities(0), read_velocities(1), read_velocities(2), read_velocities(3));
+  if (DEBUG) Serial.printf("Body Velocities: (%.3f, %.3f, %.3f)\n", body_velocities(0), body_velocities(1), body_velocities(2));
+  if (DEBUG) Serial.printf("Wheel Velocities: (%d, %d, %d, %d)\n", wheel_velocities(0), wheel_velocities(1), wheel_velocities(2), wheel_velocities(3));
+  if (DEBUG) Serial.printf("Read Velocities: (%d, %d, %d, %d)\n", read_velocities(0), read_velocities(1), read_velocities(2), read_velocities(3));
 
   
   /// Service the kicker
@@ -175,9 +175,10 @@ void loop() {
   status.kick_healthy = kstate.healthy;
   status.ball_sense_status = kstate.ball_sensed;
   kicker_voltage = kstate.current_voltage;
-  // if (!status.kick_healthy) error_handler(KickerError);
   if (DEBUG) Serial.print("Kicker Response: ");
   if (DEBUG) Serial.println(kstate.to_string());
+  // Check for kicker error after some time
+  if (!status.kick_healthy && millis() > 5000) error_handler(KickerError);
 
 
   /// Service the radio
