@@ -52,18 +52,13 @@ void draw_info(U8G2* u8g2, RobotStatusMessage status, bool radio, uint8_t kicker
 
 void draw_colors(U8G2* u8g2, Team team, uint8_t id) {
     screen_defaults(u8g2);
+    u8g2->setFont(u8g2_font_10x20_tr);
 
     // Team circle
     u8g2->drawStr(65, 48, (team == Team::Blue ? "B" : "Y"));
-    u8g2->drawCircle(67, 43, 8, U8G2_DRAW_ALL);
-
     // ID circles
     u8g2->drawStr(32, 30, id_colors[id][0]);
-    u8g2->drawCircle(35, 26, 8, U8G2_DRAW_ALL);
     u8g2->drawStr(96, 30, id_colors[id][1]);
-    u8g2->drawCircle(99, 26, 8, U8G2_DRAW_ALL);
     u8g2->drawStr(40, 57, id_colors[id][2]);
-    u8g2->drawCircle(43, 53, 8, U8G2_DRAW_ALL);
     u8g2->drawStr(88, 57, id_colors[id][3]);
-    u8g2->drawCircle(91, 53, 8, U8G2_DRAW_ALL);
 }
