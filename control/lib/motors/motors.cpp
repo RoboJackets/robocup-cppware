@@ -9,8 +9,8 @@ void MotorController::begin() {
 }
 
 void MotorController::send_command(int32_t setpoint) {
-    uart.write((uint8_t*)&setpoint, 4); // Break setpoint into 4 LE ordered bytes
     uart.write(0x11); // Required additional byte due to legacy
+    uart.write((uint8_t*)&setpoint, 4); // Break setpoint into 4 LE ordered bytes
 }
 
 int32_t MotorController::read_current_velocity() {

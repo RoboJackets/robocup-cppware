@@ -129,3 +129,36 @@ void Display::window_select(Window window) {
 void Display::next_window() {
     current_window = static_cast<Window>(circular_mod((int16_t)current_window, 1, 2));
 }
+
+static bool error_flash = false;
+void Display::draw_error(RobotError error) {
+    Display::defaults();
+    u8g2.setFont(u8g2_font_10x20_tr);
+
+    u8g2.drawStr((DISPLAY_WIDTH - 5 * 10) / 2, LAST_YELLOW_Y - 1, "ERROR");
+
+    if (error_flash) {
+        u8g2.drawBox(0, 0, 30, 15);
+    } else {
+        u8g2.drawBox(DISPLAY_WIDTH - 30, 0, 30, 15);
+    }
+    error_flash = !error_flash;
+    
+    
+    
+    switch (error) {
+        case RobotError::RadioError:
+            u8g2.drawStr((DISPLAY_WIDTH - 5 * 10) / 2, LAST_YELLOW_Y + 16, "RADIO");
+            u8g2.drawStr((DISPLAY_WIDTH - 9 * 10) / 2, LAST_YELLOW_Y + 30, "INIT FAIL");
+        break;
+        case RobotError::KickerError:
+            u8g2.drawStr((DISPLAY_WIDTH - 5 * 10) / 2, LAST_YELLOW_Y + 16, "KICKER");
+            u8g2.drawStr((DISPLAY_WIDTH - 11 * 10) / 2, LAST_YELLOW_Y + 30, "NO RESPONSE");
+        break;
+        default:
+            u8g2.drawStr((DISPLAY_WIDTH - 6 * 10) / 2, LAST_YELLOW_Y + 16, "UNKOWN");
+            u8g2.drawStr((DISPLAY_WIDTH - 5 * 10) / 2, LAST_YELLOW_Y + 30, "ERROR");
+        break;
+    }
+    
+}

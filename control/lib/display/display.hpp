@@ -10,6 +10,7 @@ This can be considered mess and should be taken with a grain of salt
 #include <U8g2lib.h>
 
 #include "radio.hpp"
+#include "types.hpp"
 
 // Y value of the last yellow pixel, +1 is the first blue pixel
 #define LAST_YELLOW_Y 15
@@ -173,6 +174,8 @@ public:
      * @param percent Fullness of battery 0-100 (Values outside this display as "ERROR")
      */
     void draw_battery(uint8_t x, uint8_t y, uint8_t percent);
+
+    void draw_error(RobotError error);
 
 private:
     U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2{U8G2_R0, U8X8_PIN_NONE};

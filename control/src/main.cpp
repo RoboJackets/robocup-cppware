@@ -35,8 +35,6 @@ volatile bool new_command = false;
 uint32_t last_command = 0;
 // Kicker voltage
 uint8_t kicker_voltage = 0;
-// Screen select
-uint8_t screen_select = 0;
 // For timing profiling
 elapsedMicros us;
 // History of good/bad sends
@@ -146,14 +144,16 @@ void loop() {
   // Calculate wheel velocities, zero if past die time
   Vector3f body_velocities = (radio_timeout ? Vector3f::Zero() : control_message.get_velocity());
   Vector4i wheel_velocities = motion_controller.body_to_wheels(body_velocities);
+  Vector4i read_velocities = Vector4i::Zero();
   // Send commands to motor controllers
   // TODO: Find real source of order reversal
-  motors[0].send_and_read(wheel_velocities(3));
-  motors[1].send_and_read(wheel_velocities(2));
-  motors[2].send_and_read(wheel_velocities(1));
-  motors[3].send_and_read(wheel_velocities(0));
-  if (DEBUG) Serial.printf("Body Velocities: (%.3f, %.3f, %.3f)\n", body_velocities(0), body_velocities(1), body_velocities(2));
-  if (DEBUG) Serial.printf("Wheel Velocities: (%d, %d, %d, %d)\n", wheel_velocities(0), wheel_velocities(1), wheel_velocities(2), wheel_velocities(3));
+  read_velocities(3) = motors[0].send_and_read(wheel_velocities(3));
+  read_velocities(2) = motors[1].send_and_read(wheel_velocities(2));
+  read_velocities(1) = motors[2].send_and_read(wheel_velocities(1));
+  read_velocities(0) = motors[3].send_and_read(wheel_velocities(0));
+  Serial.printf("Body Velocities: (%.3f, %.3f, %.3f)\n", body_velocities(0), body_velocities(1), body_velocities(2));
+  Serial.printf("Wheel Velocities: (%d, %d, %d, %d)\n", wheel_velocities(0), wheel_velocities(1), wheel_velocities(2), wheel_velocities(3));
+  Serial.printf("Read Velocities: (%d, %d, %d, %d)\n", read_velocities(0), read_velocities(1), read_velocities(2), read_velocities(3));
 
   
   /// Service the kicker
@@ -229,15 +229,14 @@ void loop() {
   if (iteration != 0 && iteration % 10000 == 0) {
     display.next_window();
   }
-  if (iteration % 500 == 0) {
-    us = 0;
-    display.clear_buffer();
-    display.update_info(status, !radio_timeout, kicker_voltage, acks_to_percent(radio_acks));
-    display.draw_header();
-    display.draw_window();
-    display.send_buffer();
-    if (DEBUG) Serial.printf("Screen update time: %lu us\n", (uint32_t) us);
-  }
+
+  us = 0;
+  display.clear_buffer();
+  display.update_info(status, !radio_timeout, kicker_voltage, acks_to_percent(radio_acks));
+  display.draw_header();
+  display.draw_window();
+  display.send_buffer();
+  if (DEBUG) Serial.printf("Screen update time: %lu us\n", (uint32_t) us);
   
   iteration++;
   if (DEBUG) Serial.printf("Loop time: %lu ms\n", millis() - loop_start);
@@ -263,29 +262,38 @@ void receive_command() {
 // Universal error handler
 // TODO: This is trash, redo
 void error_handler(RobotError e) {
-  // Stop motors
-  for (auto& motor : motors) {
-    motor.send_command(0);
-  }
-  // Stop kicker
-  SPI1.beginTransaction(settings);
-  digitalWrite(KICKER_CSN_PIN, LOW);
-  uint8_t _ = SPI1.transfer(KickerCommand().pack());
-  digitalWrite(KICKER_CSN_PIN, HIGH);
-  SPI1.endTransaction();
-
-  // Error specific handling
-  switch (e) {
-    case RadioError:
-      while(1) {Serial.println("RADIO ERROR"); delay(500);}
-    break;
-    case KickerError:
-      while(1) {Serial.println("KICKER ERROR"); delay(500);}
-    break;
-    default:
-
-    break;
-  }
   // Unrecoverable by default
-  while(1) {delay(1);}
+  while(1) {
+    // Alert to screen
+    display.clear_buffer();
+    display.draw_error(e);
+    display.send_buffer();
+
+    // Stop motors
+    for (auto& motor : motors) {
+      motor.send_command(0);
+    }
+
+    // Stop kicker
+    SPI1.beginTransaction(settings);
+    digitalWrite(KICKER_CSN_PIN, LOW);
+    uint8_t _ = SPI1.transfer(KickerCommand().pack());
+    digitalWrite(KICKER_CSN_PIN, HIGH);
+    SPI1.endTransaction();
+
+    // Error specific handling
+    switch (e) {
+      case RadioError:
+        Serial.println("RADIO ERROR");
+      break;
+      case KickerError:
+        Serial.println("KICKER ERROR");
+      break;
+      default:
+
+      break;
+    }
+
+    delay(500);
+  }
 } 
