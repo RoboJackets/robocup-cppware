@@ -175,6 +175,13 @@ public:
      */
     void draw_battery(uint8_t x, uint8_t y, uint8_t percent);
 
+    /**
+     * Draws error screen with flashing indicator for attention
+     * 
+     * @param error current error to change what text is displayed
+     * 
+     * @note Not a header or window, uses full display
+     */
     void draw_error(RobotError error);
 
 private:
