@@ -41,3 +41,11 @@ Vector3f ControlMessage::get_velocity() {
 String ControlMessage::to_string() {
     return "Team: " + String((team == Blue ? "Blue" : "Yellow")) + String(" | ID: ") + robot_id + " | Shoot Mode: " + shootmode_to_str(shoot_mode) + " | Trigger Mode: " + triggermode_to_str(trigger_mode) + " | X: " + body_x + " | Y: " + body_y + " | W: " + body_w + " | Dribbler Speed: " + dribbler_speed + " | Kick Strength " + kick_strength + " | Role: " + role + " | Mode: " + mode;
 }
+
+uint8_t acks_to_percent(bool (&acks)[100]) {
+    uint8_t percent = 0;
+    for (size_t i = 0; i < 100; i++) {
+        if (acks[i]) percent += 1;
+    }
+    return percent;
+}

@@ -3,6 +3,8 @@
 #include <Arduino.h>
 
 // From front perspective
+// Use to index motors array
+// Probably useless but fun to exist
 enum Motors {
     FR_MOTOR,
     BR_MOTOR,
@@ -12,31 +14,46 @@ enum Motors {
     MOTOR_COUNT,
 };
 
-/// @brief State handler for one motorboard motor
+// State handler for one motorboard motor
 class MotorController {
 private:
     HardwareSerial& uart;
     uint32_t baud;
 
 public:
-    /// @brief Constructor for motor controller
-    /// @param motor_uart Serial to be used to communicate with motor
-    /// @param baud Serial baud rate
+    /**
+     * Constructor for motor controller
+     * 
+     * @param motor_uart Serial to be used to communicate with motor
+     * @param baud Serial baud rate (defaults to 115200)
+     */
     MotorController(HardwareSerial& motor_uart, uint32_t baud = 115200);
 
-    /// @brief Start serial connection with motor
+    /**
+     * Start serial connection with motor
+     */
     void begin();
 
-    /// @brief Send command to motor
-    /// @param setpoint Target ticks per second motor velocity
+    /**
+     * Send command to motor
+     * 
+     * @param setpoint Target ticks per second motor velocity
+     */
     void send_command(int32_t setpoint);
 
-    /// @brief Read velocity response from motor
-    /// @return Motor velocity in ticks per second
+    /**
+     * Read velocity response from motor
+     * 
+     * @return Motor velocity in ticks per second
+     */
     int32_t read_current_velocity();
 
-    /// @brief Safely performs both a read and write to motor
-    /// @param setpoint Target ticks per second motor velocity
-    /// @return Value returned by motor
+    /**
+     * Safely performs both a read and write to motor
+     * 
+     * @param setpoint Target ticks per second motor velocity
+     * 
+     * @return Motor velocity in ticks per second
+     */
     int32_t send_and_read(int32_t setpoint);
 };

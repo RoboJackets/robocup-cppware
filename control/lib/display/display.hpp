@@ -1,3 +1,8 @@
+/*
+A basic display driver to wrap the u8g2 driver in simplified functions
+This can be considered mess and should be taken with a grain of salt
+*/
+
 #pragma once
 
 #include <Arduino.h>
@@ -52,39 +57,142 @@ static const unsigned char logo_text [] PROGMEM = {
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 };
 
+// Window selector
 enum Window {
     Info = 0,
     Colors = 1,
 
 };
 
+// Display wrapper class
 class Display {
 public:
+    /**
+     * Initializes I2C display
+     * 
+     * @param frequency I2C Wire frequency
+     */
     void begin(uint32_t frequency);
+
+    /**
+     * Clears current screen buffer
+     * 
+     * @note Call this each time before starting a new screen update to prevent data mashing
+     */
     void clear_buffer();
+
+    /**
+     * Sends current buffer to display
+     * 
+     * @note This gives an additional decrease of 7ms of write time compared to the base
+     * u8g2 sendBuffer function.
+     * 
+     * @warning This is technically gpt code however I have not run into any issues with it.
+     */
     void send_buffer();
+
+    /**
+     * Applies default write settings to display
+     * 
+     * @note This is called at the start of all draw functions to prevent unknown settings
+     */
     void defaults();
+
+    /**
+     * A simple hello world test to ensure screen is working
+     * 
+     * @note Clears and sends buffer on its own
+     */
     void test_display();
-    void update_info(RobotStatusMessage status, bool radio_status, uint8_t kicker_voltage);
+
+    /**
+     * Updates all stored info for screen display
+     * 
+     * @param status Robot status
+     * @param radio_status True if radio is connected
+     * @param kicker_voltage Current kicker voltage
+     * @param ack_percent Current radio acknowledgment percent 0-100
+     */
+    void update_info(RobotStatusMessage status, bool radio_status, uint8_t kicker_voltage, uint8_t ack_percent);
+
+    /**
+     * Draws the current window defined by `current_window`  to buffer
+     * @see
+     * - `window_select()`
+     * - `next_window()`
+     * 
+     * @note Windows are defined as the lower blue pixels so should only write below `LOWEST_YELLOW_Y`
+     */
     void draw_window();
+
+    /**
+     * Draws the current header to buffer
+     * 
+     * @note Headers are defined as the upper yellow pixels so should only write at/above `LOWEST_YELLOW_Y`
+     */
     void draw_header();
+
+    /**
+     * Sets current window
+     * 
+     * @param window Window to be drawn by `draw_window()`
+     */
     void window_select(Window window);
+
+    /**
+     * Increments the current window
+     * 
+     * @note Order is determined by the `Window` enum
+     */
     void next_window();
+
+    /**
+     * Draws the "info" window to buffer
+     */
     void draw_info();
+
+    /**
+     * Draws the "colors" window to buffer
+     */
     void draw_colors();
+
+    /**
+     * Draws the startup screen to buffer
+     * 
+     * @param dots number of dots after text for animation purposes
+     * 
+     * @note Not a header or window, uses full display
+     */
     void draw_startup(uint8_t dots);
+
+    /**
+     * Draws a battery icon with a set fullness
+     * 
+     * @param x Leftmost pixel
+     * @param y Topmost pixel
+     * @param percent Fullness of battery 0-100 (Values outside this display as "ERROR")
+     */
     void draw_battery(uint8_t x, uint8_t y, uint8_t percent);
 
 private:
     U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2{U8G2_R0, U8X8_PIN_NONE};
+    // Current window for draw_window()
     Window current_window = Window::Info;
-    // Displayed vars
+    // True if good radio
     bool radio_status = false;
+    // True if good kicker
     bool kicker_status = false;
+    // True if kick queued
     bool kicking = false;
+    // Current kicker voltage
     uint8_t kicker_voltage = 0;
+    // Current battery percent 0-100
     uint8_t battery_percent = 0;
+    // Current radio success rate
+    uint8_t ack_percent;
+    // Robot team
     Team team = Team::Blue;
+    // Robot id
     uint8_t id = 0;
 
     // Colors for team order goes FL, FR, BL, BR
@@ -108,7 +216,13 @@ private:
     };
 };
 
-
+/**
+ * A simple circular mod allowing for increment and decrement
+ * 
+ * @param var Value to mod
+ * @param increment Value to increment/decrement `var` by
+ * @param max Maximum value of `var`
+ */
 inline int16_t circular_mod(int16_t var, int16_t increment, int16_t max) {
     return ((var + increment) % max + max) % max;
 }

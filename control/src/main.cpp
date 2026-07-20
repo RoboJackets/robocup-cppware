@@ -12,7 +12,6 @@ MotorController motors[MOTOR_COUNT] = {
 // Kicker SPI
 SPISettings settings(2000000, MSBFIRST, SPI_MODE3);
 // I2C Display
-// U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE);
 Display display = Display();
 // Radio
 RF24 radio(RADIO_CE_PIN, RADIO_CSN_PIN, 5000000);
@@ -40,6 +39,10 @@ uint8_t kicker_voltage = 0;
 uint8_t screen_select = 0;
 // For timing profiling
 elapsedMicros us;
+// History of good/bad sends
+bool radio_acks[100];
+// Index of radio history array
+uint8_t radio_acks_idx = 0;
 
 
 void setup() {
@@ -112,6 +115,8 @@ void setup() {
   radio.startListening();
 
   if (DEBUG) radio.printDetails();
+  // Initialize acks array to true
+  memset(radio_acks, true, sizeof(radio_acks));
   // End Initialize Radio
 }
 
@@ -121,7 +126,7 @@ void loop() {
   // Check for radio timeout
   bool radio_timeout = millis() - last_command > DIE_TIME_MS;
 
-  // Poll battery voltage
+  /// Poll battery voltage
   uint16_t raw_batt = analogRead(BATTERY_SENSE_PIN);
   float battery_voltage = raw_batt * 3.3 / 1023.0;
   if (DEBUG) Serial.printf("Battery Voltage: %.2f\n", battery_voltage);
@@ -137,6 +142,7 @@ void loop() {
     }
   }
 
+  /// Service the motors
   // Calculate wheel velocities, zero if past die time
   Vector3f body_velocities = (radio_timeout ? Vector3f::Zero() : control_message.get_velocity());
   Vector4i wheel_velocities = motion_controller.body_to_wheels(body_velocities);
@@ -174,6 +180,7 @@ void loop() {
   if (DEBUG) Serial.println(kstate.to_string());
 
 
+  /// Service the radio
   // Read new command if available
   if (new_command) {
     if (DEBUG) Serial.println("New Command!");
@@ -196,7 +203,11 @@ void loop() {
       radio.stopListening();
       radio.setPayloadSize(ROBOT_STATUS_SIZE);
       bool ack = radio.write(&response, ROBOT_STATUS_SIZE);
-      if (DEBUG && ack) Serial.println("Good send!");
+      // Update history
+      radio_acks[radio_acks_idx] = ack;
+      radio_acks_idx = (radio_acks_idx + 1) % 100;
+      if (DEBUG) Serial.println((ack ? "Good send!" : "Send Fail!"));
+      if (DEBUG) Serial.printf("Radio success rate: %d%%\n", acks_to_percent(radio_acks));
       radio.setPayloadSize(CONTROL_MESSAGE_SIZE);
       radio.startListening();
     }
@@ -211,25 +222,25 @@ void loop() {
     last_command = millis();
   }
   
-  // Update screen
+  /// Update screen
   // TODO: Maybe better idea than cycling between the two screens
   // however it is currently built out to accept more
-  // TODO: Fix time this takes
-  // One write taking 36ms is unnacceptable and causes issues with motors when run every cycle
-  // Could possible still be causing unseen jitters with motors as is
+  // TODO: Switch to interrupt timer if worth?
   if (iteration != 0 && iteration % 10000 == 0) {
     display.next_window();
   }
   if (iteration % 500 == 0) {
+    us = 0;
     display.clear_buffer();
-    display.update_info(status, !radio_timeout, kicker_voltage);
+    display.update_info(status, !radio_timeout, kicker_voltage, acks_to_percent(radio_acks));
     display.draw_header();
     display.draw_window();
     display.send_buffer();
+    if (DEBUG) Serial.printf("Screen update time: %lu us\n", (uint32_t) us);
   }
   
   iteration++;
-  if (DEBUG) Serial.printf("Loop time: %lums\n", millis() - loop_start);
+  if (DEBUG) Serial.printf("Loop time: %lu ms\n", millis() - loop_start);
 }
 
 // Safe robot shutdown ending with killing motor board
@@ -250,6 +261,7 @@ void receive_command() {
 }
 
 // Universal error handler
+// TODO: This is trash, redo
 void error_handler(RobotError e) {
   // Stop motors
   for (auto& motor : motors) {

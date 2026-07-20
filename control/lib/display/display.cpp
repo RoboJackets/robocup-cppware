@@ -3,6 +3,7 @@
 void Display::begin(uint32_t frequency) {
     u8g2.begin();
     u8g2.setBusClock(frequency);
+    Wire.setClock(frequency);
     Display::defaults();
 }
 
@@ -43,9 +44,10 @@ void Display::test_display() {
     Display::send_buffer();
 }
 
-void Display::update_info(RobotStatusMessage status, bool _radio_status, uint8_t _kicker_voltage) {
+void Display::update_info(RobotStatusMessage status, bool _radio_status, uint8_t _kicker_voltage, uint8_t _ack_percent) {
     radio_status = _radio_status;
     kicker_voltage = _kicker_voltage;
+    ack_percent = _ack_percent;
     battery_percent = status.battery_percent;
     kicker_status = status.kick_healthy;
     kicking = status.kick_status;
@@ -89,9 +91,9 @@ void Display::draw_window() {
 void Display::draw_info() {
     Display::defaults();
     char buf[32];
-    snprintf(buf, sizeof(buf), "Radio: %s", (radio_status ? "GOOD" : "DEAD"));
+    snprintf(buf, sizeof(buf), "Radio: %s SR: %d%%", (radio_status ? "GOOD" : "DEAD"), ack_percent);
     u8g2.drawStr(0, LAST_YELLOW_Y + 8, buf);
-    snprintf(buf, sizeof(buf), "Kicker: %s V: %d", (kicker_status ? "GOOD" : "DEAD"), kicker_voltage);
+    snprintf(buf, sizeof(buf), "Kicker: %s V: %dv", (kicker_status ? "GOOD" : "DEAD"), kicker_voltage);
     u8g2.drawStr(0, LAST_YELLOW_Y + 16, buf);
     snprintf(buf, sizeof(buf), "Kicking: %s ", (kicking ? "RDY" : "NOT"));
     u8g2.drawStr(0, LAST_YELLOW_Y + 24, buf);

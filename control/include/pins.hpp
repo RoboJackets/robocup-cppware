@@ -1,5 +1,7 @@
-// Pin map for teensy pinout
-// Try to keep up to date with ref doc https://docs.google.com/spreadsheets/d/1R4ADXmqaLGxfWDbyh1WTpnZDjxXoTz-bSd3AXz-UCJA/edit?usp=sharing
+/*
+Pin map for teensy pinout
+Try to keep up to date with ref doc https://docs.google.com/spreadsheets/d/1R4ADXmqaLGxfWDbyh1WTpnZDjxXoTz-bSd3AXz-UCJA/edit?usp=sharing
+*/
 
 #pragma once
 

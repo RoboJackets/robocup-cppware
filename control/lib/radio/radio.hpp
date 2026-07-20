@@ -1,3 +1,7 @@
+/*
+Various data types and helper functions used for radio communication
+*/
+
 #pragma once
 
 #include <Arduino.h>
@@ -68,8 +72,11 @@ struct RobotStatusMessage {
     // Status of FPGA
     bool fpga_status = false;
 
-    /// @brief Pack status into SPI format for radio
-    /// @param pkg Buffer to pack status into, must be of ROBOT_STATUS_SIZE size
+    /**
+     * Packs the current status into SPI format for radio
+     * 
+     * @param pkg Buffer to pack status into, must be of `ROBOT_STATUS_SIZE` size
+     */
     void pack(uint8_t (&pkg)[ROBOT_STATUS_SIZE]);
 };
 
@@ -97,13 +104,36 @@ struct ControlMessage {
     // Mode, 0 is normal, rest are for debug
     uint8_t mode = 0;
 
-    /// @brief Update control message values from radio SPI control message
-    /// @param data Raw data from radio
+    /**
+     * Updates the control message values from radio SPI control message
+     * 
+     * @param data Raw data from radio of `CONTROL_MESSAGE_SIZE` size
+     */
     void unpack(uint8_t (&data)[CONTROL_MESSAGE_SIZE]);
-    /// @brief Formats velocity data from control message
-    /// @return Properly formatted velocities
+
+    /**
+     * Formats velocity data from control message
+     * 
+     * @return Properly formatted velocities
+     * 
+     * @warning Do not read the values straight from the struct, use this function
+     * otherwise scaling will not be applied.
+     */
     Vector3f get_velocity();
-    /// @brief Converts control message into a readible String format
-    /// @return String representation of control message
+
+    /**
+     * Converts control message into a readible String format
+     * 
+     * @return String representation of control message
+     */
     String to_string();
 };
+
+/**
+ * Converts an array of acks into a percent rate
+ * 
+ * @param acks 100 index array of bools where true means good send
+ * 
+ * @return Percent rate of good sends 0-100
+ */
+uint8_t acks_to_percent(bool (&acks)[100]);
