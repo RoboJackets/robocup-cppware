@@ -37,6 +37,8 @@ uint32_t last_command = 0;
 uint8_t kicker_voltage = 0;
 // Screen select
 uint8_t screen_select = 0;
+// For timing profiling
+elapsedMicros us;
 
 
 void setup() {
@@ -69,6 +71,7 @@ void setup() {
 
   // Initialize Screen //
   u8g2.begin();
+  u8g2.setBusClock(1000000);
   // End Initialize Screen //
 
   // Initialize Serial //
@@ -78,7 +81,7 @@ void setup() {
     if (Serial.available()) break;
     u8g2.clearBuffer();
     draw_startup(&u8g2, i + 1);
-    u8g2.sendBuffer();
+    send_buffer_fast(&u8g2);
     delay(1000);
   }
   // End Initialize Serial //
@@ -226,7 +229,7 @@ void loop() {
     } else {
       draw_info(&u8g2, status, !radio_timeout, kicker_voltage);
     }
-    u8g2.sendBuffer();
+    send_buffer_fast(&u8g2);
   }
   
   iteration++;

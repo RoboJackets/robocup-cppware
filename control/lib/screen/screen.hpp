@@ -4,6 +4,7 @@
 #pragma once
 
 #include <Arduino.h>
+#include <Wire.h>
 #include <U8g2lib.h>
 
 #include "radio.hpp"
@@ -85,3 +86,6 @@ void draw_battery(U8G2* u8g2, uint32_t x, uint32_t y, uint8_t percent);
 void draw_header(U8G2* u8g2, RobotStatusMessage status);
 void draw_info(U8G2* u8g2, RobotStatusMessage status, bool radio, uint8_t kicker_voltage);
 void draw_colors(U8G2* u8g2, Team team, uint8_t id);
+/// @brief Manually send buffer to improve speeds from 17 -> 10ms, chatgpt code so don't trust but it works.
+/// @param u8g2 Screen pointer
+void send_buffer_fast(U8G2* u8g2);

@@ -62,3 +62,23 @@ void draw_colors(U8G2* u8g2, Team team, uint8_t id) {
     u8g2->drawStr(40, 57, id_colors[id][2]);
     u8g2->drawStr(88, 57, id_colors[id][3]);
 }
+
+void send_buffer_fast(U8G2* u8g2) {
+    uint8_t *buf = u8g2->getBufferPtr();
+
+    for (uint8_t page = 0; page < 8; page++) {
+        // Tell screen where to write
+        Wire.beginTransmission(0x3C); // Address
+        Wire.write(0x00); // Following bytes are commands
+        Wire.write(0xB0 | page); // Set display page
+        Wire.write(0x00); // Column address lower nibble = 0
+        Wire.write(0x10); // Column address upper nibble = 0
+        Wire.endTransmission();
+
+        // Send actual data
+        Wire.beginTransmission(0x3C);
+        Wire.write(0x40); // Next bytes are display data
+        Wire.write(&buf[page * 128], 128);
+        Wire.endTransmission();
+    }
+}
