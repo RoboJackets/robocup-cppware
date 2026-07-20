@@ -1,6 +1,3 @@
-// Various helper functions for driving the onboard screen
-// TODO: Consider turning this into a proper class to completely abstract
-
 #pragma once
 
 #include <Arduino.h>
@@ -11,14 +8,10 @@
 
 // Y value of the last yellow pixel, +1 is the first blue pixel
 #define LAST_YELLOW_Y 15
-
-// For creating graphics:
-// https://www.pixilart.com/draw#
-// Create pixel art of exact size
-// https://javl.github.io/image2cpp/
-// Background color: Black
-// Invert colors
-// Swap bits in bytes
+// Display Width
+#define DISPLAY_WIDTH 128
+// Display Height
+#define DISPLAY_HEIGHT 64
 
 // battery icons, 12x6px
 static const unsigned char battery_icon[9][12] U8X8_PROGMEM = {
@@ -59,33 +52,63 @@ static const unsigned char logo_text [] PROGMEM = {
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 };
 
-// Colors for team order goes FL, FR, BL, BR
-static const char* id_colors[16][4] = {
-    {"P", "P", "G", "P"},
-    {"G", "P", "G", "P"},
-    {"G", "G", "G", "P"},
-    {"P", "G", "G", "P"},
-    {"P", "P", "P", "G"},
-    {"G", "P", "P", "G"},
-    {"G", "G", "P", "G"},
-    {"P", "G", "P", "G"},
-    {"G", "G", "G", "G"},
-    {"P", "P", "P", "P"},
-    {"P", "P", "G", "G"},
-    {"G", "G", "P", "P"},
-    {"G", "P", "G", "G"},
-    {"G", "P", "P", "P"},
-    {"P", "G", "G", "G"},
-    {"P", "G", "P", "P"},
+enum Window {
+    Info = 0,
+    Colors = 1,
+
+};
+
+class Display {
+public:
+    void begin(uint32_t frequency);
+    void clear_buffer();
+    void send_buffer();
+    void defaults();
+    void test_display();
+    void update_info(RobotStatusMessage status, bool radio_status, uint8_t kicker_voltage);
+    void draw_window();
+    void draw_header();
+    void window_select(Window window);
+    void next_window();
+    void draw_info();
+    void draw_colors();
+    void draw_startup(uint8_t dots);
+    void draw_battery(uint8_t x, uint8_t y, uint8_t percent);
+
+private:
+    U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2{U8G2_R0, U8X8_PIN_NONE};
+    Window current_window = Window::Info;
+    // Displayed vars
+    bool radio_status = false;
+    bool kicker_status = false;
+    bool kicking = false;
+    uint8_t kicker_voltage = 0;
+    uint8_t battery_percent = 0;
+    Team team = Team::Blue;
+    uint8_t id = 0;
+
+    // Colors for team order goes FL, FR, BL, BR
+    static constexpr const char* id_colors[16][4] = {
+        {"P", "P", "G", "P"},
+        {"G", "P", "G", "P"},
+        {"G", "G", "G", "P"},
+        {"P", "G", "G", "P"},
+        {"P", "P", "P", "G"},
+        {"G", "P", "P", "G"},
+        {"G", "G", "P", "G"},
+        {"P", "G", "P", "G"},
+        {"G", "G", "G", "G"},
+        {"P", "P", "P", "P"},
+        {"P", "P", "G", "G"},
+        {"G", "G", "P", "P"},
+        {"G", "P", "G", "G"},
+        {"G", "P", "P", "P"},
+        {"P", "G", "G", "G"},
+        {"P", "G", "P", "P"},
+    };
 };
 
 
-void screen_defaults(U8G2* u8g2);
-void draw_startup(U8G2*, uint8_t dots);
-void draw_battery(U8G2* u8g2, uint32_t x, uint32_t y, uint8_t percent);
-void draw_header(U8G2* u8g2, RobotStatusMessage status);
-void draw_info(U8G2* u8g2, RobotStatusMessage status, bool radio, uint8_t kicker_voltage);
-void draw_colors(U8G2* u8g2, Team team, uint8_t id);
-/// @brief Manually send buffer to improve speeds from 17 -> 10ms, chatgpt code so don't trust but it works.
-/// @param u8g2 Screen pointer
-void send_buffer_fast(U8G2* u8g2);
+inline int16_t circular_mod(int16_t var, int16_t increment, int16_t max) {
+    return ((var + increment) % max + max) % max;
+}

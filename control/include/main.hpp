@@ -16,7 +16,7 @@ using namespace Eigen;
 #include "kicker.hpp"
 #include "radio.hpp"
 #include "motion.hpp"
-#include "screen.hpp"
+#include "display.hpp"
 
 void power_switch_interrupt();
 void kill_self();

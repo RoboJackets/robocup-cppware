@@ -12,7 +12,8 @@ MotorController motors[MOTOR_COUNT] = {
 // Kicker SPI
 SPISettings settings(2000000, MSBFIRST, SPI_MODE3);
 // I2C Display
-U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE);
+// U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE);
+Display display = Display();
 // Radio
 RF24 radio(RADIO_CE_PIN, RADIO_CSN_PIN, 5000000);
 
@@ -70,8 +71,7 @@ void setup() {
   // End Initialize Kicker //
 
   // Initialize Screen //
-  u8g2.begin();
-  u8g2.setBusClock(1000000);
+  display.begin(1000000);
   // End Initialize Screen //
 
   // Initialize Serial //
@@ -79,9 +79,9 @@ void setup() {
   // Wait 3 seconds or until serial connected
   for (int i = 0; i < 3; i++) {
     if (Serial.available()) break;
-    u8g2.clearBuffer();
-    draw_startup(&u8g2, i + 1);
-    send_buffer_fast(&u8g2);
+    display.clear_buffer();
+    display.draw_startup(i + 1);
+    display.send_buffer();
     delay(1000);
   }
   // End Initialize Serial //
@@ -217,19 +217,15 @@ void loop() {
   // TODO: Fix time this takes
   // One write taking 36ms is unnacceptable and causes issues with motors when run every cycle
   // Could possible still be causing unseen jitters with motors as is
-  if (iteration % 10000 == 0) {
-    screen_select++;
-    if (screen_select > 1) screen_select = 0;
+  if (iteration != 0 && iteration % 10000 == 0) {
+    display.next_window();
   }
   if (iteration % 500 == 0) {
-    u8g2.clearBuffer();
-    draw_header(&u8g2, status);
-    if (screen_select == 0) {
-      draw_colors(&u8g2, status.team, status.robot_id);
-    } else {
-      draw_info(&u8g2, status, !radio_timeout, kicker_voltage);
-    }
-    send_buffer_fast(&u8g2);
+    display.clear_buffer();
+    display.update_info(status, !radio_timeout, kicker_voltage);
+    display.draw_header();
+    display.draw_window();
+    display.send_buffer();
   }
   
   iteration++;
