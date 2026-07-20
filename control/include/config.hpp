@@ -1,6 +1,6 @@
 #pragma once
 
-#define DEBUG 1
+#define DEBUG 0
 
 /// Battery safety checks
 // At 2.372V, our batteries have depleted to 18.5V (see voltage divider in schematics)
