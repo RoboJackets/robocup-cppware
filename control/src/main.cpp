@@ -220,7 +220,7 @@ void loop() {
   if (iteration != 0 && iteration % 10000 == 0) {
     display.next_window();
   }
-
+  // Currently screen takes ~10ms to update so it gets to live in the main loop
   us = 0;
   display.clear_buffer();
   display.update_info(status, !radio_timeout, kicker_voltage, acks_to_percent(radio_acks));
@@ -240,6 +240,19 @@ void kill_self() {
   for (auto& motor : motors) {
     motor.send_command(0);
   }
+
+  // Kick to discharge
+  KickerCommand kcommand = {
+    Kick,
+    Immediate,
+    5,
+    false
+  };
+  for (size_t i = 0; i < 10; i++) {
+    kicker.service(kcommand);
+    delay(10);
+  }
+
   // Kill Power
   Serial.println("Killing Motor Board!");
   digitalWrite(KILLN_PIN, LOW);
