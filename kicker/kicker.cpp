@@ -207,34 +207,35 @@ int main() {
         // Allow setting the break trigger
         checking_break = command.kick_trigger == Breakbeam && to_ms_since_boot(get_absolute_time()) - 1000 > last_kick;
 
-        // Charging
-        // Check charge allowace, time since kick, and if charging is needed
-        if (!command.charge_allowed || to_ms_since_boot(get_absolute_time()) - KICK_COOLDOWN < last_kick || charging && voltage >= VOLT_MAX) {
-            if (charging) {
+        // Kick when requested, priority over charging
+        if (command.kick_trigger != Disabled && to_ms_since_boot(get_absolute_time()) - KICK_COOLDOWN > last_kick) {
+            if (charging && !(command.kick_trigger == Breakbeam && !break_triggered)) { // Disable charging when about to kick
+                charging = false;
                 last_charge = to_ms_since_boot(get_absolute_time());
+                gpio_put(CHARGE_EN, 0);
+                printf("STOPPING CHARGE\n");
+                sleep_ms(1); // Keep wait time as short as possible
             }
-            charging = false;
-            gpio_put(CHARGE_EN, 0);
-        } else if (command.charge_allowed && to_ms_since_boot(get_absolute_time()) - KICK_COOLDOWN > last_kick && !charging && voltage < VOLT_MAX - VOLT_TOLERANCE_CHARGE && to_ms_since_boot(get_absolute_time()) - CHARGE_COOLDOWN > last_charge) {
-            charging = true;
-            charge_start = to_ms_since_boot(get_absolute_time());
-            gpio_put(CHARGE_EN, 1);
-            printf("BEGINNING CHARGE\n");
-        }
-        if (charging) {
-            state = Charging;
-            gpio_put(DISCHARGE_DISABLE, 1);
-        }
-
-        // Kicking
-        // Absolutely ensure charging is not active
-        if (!charging && to_ms_since_boot(get_absolute_time()) - CHARGE_COOLDOWN > last_charge && to_ms_since_boot(get_absolute_time()) - KICK_COOLDOWN > last_kick) {
             if (command.kick_trigger == Immediate) {
                 kick(command.kick_strength, command.kick_type);
             } else if (command.kick_trigger == Breakbeam && break_triggered) {
                 kick(command.kick_strength, command.kick_type);
                 break_triggered = false;
             }
+        }
+
+        // Charge when allowed, needed, and safe
+        if (!charging && command.charge_allowed && voltage < VOLT_MAX - VOLT_TOLERANCE_CHARGE && to_ms_since_boot(get_absolute_time()) - KICK_COOLDOWN > last_kick && to_ms_since_boot(get_absolute_time()) - CHARGE_COOLDOWN > last_charge) {
+            charging = true;
+            charge_start = to_ms_since_boot(get_absolute_time());
+            gpio_put(DISCHARGE_DISABLE, 1); // Only de-asserted by a kick
+            gpio_put(CHARGE_EN, 1);
+            printf("BEGINNING CHARGE\n");
+        } else if (charging && (voltage >= VOLT_MAX || !command.charge_allowed)) {
+            charging = false;
+            last_charge = to_ms_since_boot(get_absolute_time());
+            gpio_put(CHARGE_EN, 0);
+            printf("STOPPING CHARGE\n");
         }
 
         // Drive HV LEDs

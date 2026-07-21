@@ -1,6 +1,6 @@
 #pragma once
 
-#define DEBUG 1
+#define DEBUG 0
 #define EXTRA_INFO 0 // Enables extra debug statements outside of main control loop
 #define DISABLE_ERRORS 0 // Purely for sofware debugging, do not use
 #define SPI_CLK_FREQUENCY 2000000 // Hz
@@ -18,7 +18,7 @@
 
 
 #define MAX_KICK_TIME 28200 // us
-#define KICK_COOLDOWN 100 // ms
+#define KICK_COOLDOWN 200 // ms
 #define CHARGE_COOLDOWN 100 // ms
 
 #define BREAK_THRESHOLD 400 // Max difference to trigger breakbeam
