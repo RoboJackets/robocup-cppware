@@ -17,8 +17,8 @@ enum Motors {
 // State handler for one motorboard motor
 class MotorController {
 private:
-    HardwareSerial& uart;
-    uint32_t baud;
+    HardwareSerial& _uart;
+    uint32_t _baud;
 
 public:
     /**

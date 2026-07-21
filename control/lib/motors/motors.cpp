@@ -2,22 +2,22 @@
 
 
 MotorController::MotorController(HardwareSerial& motor_uart, uint32_t baud)
-    : uart(motor_uart), baud(baud) {}
+    : _uart(motor_uart), _baud(baud) {}
 
 void MotorController::begin() {
-    uart.begin(baud);
+    _uart.begin(_baud);
 }
 
 void MotorController::send_command(int32_t setpoint) {
-    uart.write(0x11); // Required additional byte due to legacy
-    uart.write((uint8_t*)&setpoint, 4); // Break setpoint into 4 LE ordered bytes
+    _uart.write(0x11); // Required additional byte due to legacy
+    _uart.write((uint8_t*)&setpoint, 4); // Break setpoint into 4 LE ordered bytes
 }
 
 int32_t MotorController::read_current_velocity() {
     int32_t velocity = 0;
-    if (uart.available() >= 4) {
+    if (_uart.available() >= 4) {
         uint8_t buffer[4];
-        uart.readBytes(buffer, 4);
+        _uart.readBytes(buffer, 4);
         
         // Reconstruct little-endian int32_t
         velocity = (int32_t)(buffer[0] | 

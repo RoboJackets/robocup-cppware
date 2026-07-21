@@ -1,24 +1,24 @@
 #include "display.hpp"
 
 void Display::begin(uint32_t frequency) {
-    u8g2.begin();
-    u8g2.setBusClock(frequency);
+    _u8g2.begin();
+    _u8g2.setBusClock(frequency);
     Wire.setClock(frequency);
     Display::defaults();
 }
 
 void Display::defaults() {
-    u8g2.setFont(u8g2_font_6x10_tr);
-    u8g2.setDrawColor(1);
-    u8g2.setFontMode(1);
+    _u8g2.setFont(u8g2_font_6x10_tr);
+    _u8g2.setDrawColor(1);
+    _u8g2.setFontMode(1);
 }
 
 void Display::clear_buffer() {
-    u8g2.clearBuffer();
+    _u8g2.clearBuffer();
 }
 
 void Display::send_buffer() {
-    uint8_t *buf = u8g2.getBufferPtr();
+    uint8_t *buf = _u8g2.getBufferPtr();
 
     for (uint8_t page = 0; page < 8; page++) {
         // Tell screen where to write
@@ -40,45 +40,45 @@ void Display::send_buffer() {
 void Display::test_display() {
     Display::clear_buffer();
     Display::defaults();
-    u8g2.drawStr(0, 11, "Hello World!");
+    _u8g2.drawStr(0, 11, "Hello World!");
     Display::send_buffer();
 }
 
-void Display::update_info(RobotStatusMessage status, bool _radio_status, uint8_t _kicker_voltage, uint8_t _ack_percent) {
-    radio_status = _radio_status;
-    kicker_voltage = _kicker_voltage;
-    ack_percent = _ack_percent;
-    battery_percent = status.battery_percent;
-    kicker_status = status.kick_healthy;
-    kicking = status.kick_status;
-    team = status.team;
-    id = status.robot_id;
+void Display::update_info(RobotStatusMessage status, bool radio_status, uint8_t kicker_voltage, uint8_t ack_percent) {
+    _radio_status = radio_status;
+    _kicker_voltage = kicker_voltage;
+    _ack_percent = ack_percent;
+    _battery_percent = status.battery_percent;
+    _kicker_status = status.kick_healthy;
+    _kicking = status.kick_status;
+    _team = status.team;
+    _id = status.robot_id;
 }
 
 void Display::draw_header() {
     Display::defaults();
-    Display::draw_battery(0, 4, battery_percent);
+    Display::draw_battery(0, 4, _battery_percent);
     char buf[32];
-    snprintf(buf, sizeof(buf), "Team: %s ID: %d", (team == Team::Blue ? "B" : "Y"), id);
-    u8g2.drawStr(48, 10, buf);
-    u8g2.drawLine(0, LAST_YELLOW_Y, DISPLAY_WIDTH, LAST_YELLOW_Y);
+    snprintf(buf, sizeof(buf), "Team: %s ID: %d", (_team == Team::Blue ? "B" : "Y"), _id);
+    _u8g2.drawStr(48, 10, buf);
+    _u8g2.drawLine(0, LAST_YELLOW_Y, DISPLAY_WIDTH, LAST_YELLOW_Y);
 }
 
 void Display::draw_battery(uint8_t x, uint8_t y, uint8_t percent) {
     Display::defaults();
     if (percent > 100) {
-        u8g2.drawStr(x, y + 6, "ERROR");
+        _u8g2.drawStr(x, y + 6, "ERROR");
         return;
     }
     uint8_t level = 8 * percent / 100;
-    u8g2.drawXBMP(x, y, 12, 6, battery_icon[level]);
+    _u8g2.drawXBMP(x, y, 12, 6, battery_icon[level]);
     char buf[32];
     snprintf(buf, sizeof(buf), "%d%%", percent);
-    u8g2.drawStr(x + 13, y + 6, buf);
+    _u8g2.drawStr(x + 13, y + 6, buf);
 }
 
 void Display::draw_window() {
-    switch (current_window) {
+    switch (_current_window) {
         case Colors:
             Display::draw_colors();
             break;
@@ -91,56 +91,56 @@ void Display::draw_window() {
 void Display::draw_info() {
     Display::defaults();
     char buf[32];
-    snprintf(buf, sizeof(buf), "Radio: %s SR: %d%%", (radio_status ? "GOOD" : "DEAD"), ack_percent);
-    u8g2.drawStr(0, LAST_YELLOW_Y + 8, buf);
-    snprintf(buf, sizeof(buf), "Kicker: %s V: %dv", (kicker_status ? "GOOD" : "DEAD"), kicker_voltage);
-    u8g2.drawStr(0, LAST_YELLOW_Y + 16, buf);
-    snprintf(buf, sizeof(buf), "Kicking: %s ", (kicking ? "RDY" : "NOT"));
-    u8g2.drawStr(0, LAST_YELLOW_Y + 24, buf);
+    snprintf(buf, sizeof(buf), "Radio: %s SR: %d%%", (_radio_status ? "GOOD" : "DEAD"), _ack_percent);
+    _u8g2.drawStr(0, LAST_YELLOW_Y + 8, buf);
+    snprintf(buf, sizeof(buf), "Kicker: %s V: %dv", (_kicker_status ? "GOOD" : "DEAD"), _kicker_voltage);
+    _u8g2.drawStr(0, LAST_YELLOW_Y + 16, buf);
+    snprintf(buf, sizeof(buf), "Kicking: %s ", (_kicking ? "RDY" : "NOT"));
+    _u8g2.drawStr(0, LAST_YELLOW_Y + 24, buf);
 }
 
 void Display::draw_colors() {
     Display::defaults();
-    u8g2.setFont(u8g2_font_10x20_tr);
+    _u8g2.setFont(u8g2_font_10x20_tr);
 
     // Team circle
-    u8g2.drawStr(65, 48, (team == Team::Blue ? "B" : "Y"));
+    _u8g2.drawStr(65, 48, (_team == Team::Blue ? "B" : "Y"));
     // ID circles
-    u8g2.drawStr(32, 30, id_colors[id][0]);
-    u8g2.drawStr(96, 30, id_colors[id][1]);
-    u8g2.drawStr(40, 57, id_colors[id][2]);
-    u8g2.drawStr(88, 57, id_colors[id][3]);
+    _u8g2.drawStr(32, 30, id_colors[_id][0]);
+    _u8g2.drawStr(96, 30, id_colors[_id][1]);
+    _u8g2.drawStr(40, 57, id_colors[_id][2]);
+    _u8g2.drawStr(88, 57, id_colors[_id][3]);
 }
 
 void Display::draw_startup(uint8_t dots) {
     Display::defaults();
-    u8g2.drawStr(0, 11, "Awaiting Serial");
+    _u8g2.drawStr(0, 11, "Awaiting Serial");
     for (int i = 0; i < dots; i++) {
-        u8g2.drawStr(6 * 15 + 6 * i, 11, ".");
+        _u8g2.drawStr(6 * 15 + 6 * i, 11, ".");
     }
-    u8g2.drawXBMP(0, LAST_YELLOW_Y + 1, 27, 47, robobuzz);
-    u8g2.drawXBMP(28, LAST_YELLOW_Y + 24, 101, 7, logo_text);
+    _u8g2.drawXBMP(0, LAST_YELLOW_Y + 1, 27, 47, robobuzz);
+    _u8g2.drawXBMP(28, LAST_YELLOW_Y + 24, 101, 7, logo_text);
 }
  
 void Display::window_select(Window window) {
-    current_window = window;
+    _current_window = window;
 }
 
 void Display::next_window() {
-    current_window = static_cast<Window>(circular_mod((int16_t)current_window, 1, 2));
+    _current_window = static_cast<Window>(circular_mod((int16_t)_current_window, 1, 2));
 }
 
 static bool error_flash = false;
 void Display::draw_error(RobotError error) {
     Display::defaults();
-    u8g2.setFont(u8g2_font_10x20_tr);
+    _u8g2.setFont(u8g2_font_10x20_tr);
 
-    u8g2.drawStr((DISPLAY_WIDTH - 5 * 10) / 2, LAST_YELLOW_Y - 1, "ERROR");
+    _u8g2.drawStr((DISPLAY_WIDTH - 5 * 10) / 2, LAST_YELLOW_Y - 1, "ERROR");
 
     if (error_flash) {
-        u8g2.drawBox(0, 0, 30, 15);
+        _u8g2.drawBox(0, 0, 30, 15);
     } else {
-        u8g2.drawBox(DISPLAY_WIDTH - 30, 0, 30, 15);
+        _u8g2.drawBox(DISPLAY_WIDTH - 30, 0, 30, 15);
     }
     error_flash = !error_flash;
     
@@ -148,16 +148,16 @@ void Display::draw_error(RobotError error) {
     
     switch (error) {
         case RobotError::RadioError:
-            u8g2.drawStr((DISPLAY_WIDTH - 5 * 10) / 2, LAST_YELLOW_Y + 16, "RADIO");
-            u8g2.drawStr((DISPLAY_WIDTH - 9 * 10) / 2, LAST_YELLOW_Y + 30, "INIT FAIL");
+            _u8g2.drawStr((DISPLAY_WIDTH - 5 * 10) / 2, LAST_YELLOW_Y + 16, "RADIO");
+            _u8g2.drawStr((DISPLAY_WIDTH - 9 * 10) / 2, LAST_YELLOW_Y + 30, "INIT FAIL");
         break;
         case RobotError::KickerError:
-            u8g2.drawStr((DISPLAY_WIDTH - 5 * 10) / 2, LAST_YELLOW_Y + 16, "KICKER");
-            u8g2.drawStr((DISPLAY_WIDTH - 11 * 10) / 2, LAST_YELLOW_Y + 30, "NO RESPONSE");
+            _u8g2.drawStr((DISPLAY_WIDTH - 5 * 10) / 2, LAST_YELLOW_Y + 16, "KICKER");
+            _u8g2.drawStr((DISPLAY_WIDTH - 11 * 10) / 2, LAST_YELLOW_Y + 30, "NO RESPONSE");
         break;
         default:
-            u8g2.drawStr((DISPLAY_WIDTH - 6 * 10) / 2, LAST_YELLOW_Y + 16, "UNKOWN");
-            u8g2.drawStr((DISPLAY_WIDTH - 5 * 10) / 2, LAST_YELLOW_Y + 30, "ERROR");
+            _u8g2.drawStr((DISPLAY_WIDTH - 6 * 10) / 2, LAST_YELLOW_Y + 16, "UNKOWN");
+            _u8g2.drawStr((DISPLAY_WIDTH - 5 * 10) / 2, LAST_YELLOW_Y + 30, "ERROR");
         break;
     }
     

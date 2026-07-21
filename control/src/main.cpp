@@ -11,6 +11,7 @@ MotorController motors[MOTOR_COUNT] = {
 };
 // Kicker SPI
 SPISettings settings(2000000, MSBFIRST, SPI_MODE3);
+Kicker kicker(SPI1, settings, KICKER_CSN_PIN, KICKER_RESETN_PIN, KICKER_MISO_PIN);
 // I2C Display
 Display display = Display();
 // Radio
@@ -62,13 +63,7 @@ void setup() {
   // End Initialize Motor Board
 
   // Initialize Kicker //
-  // Non default MISO assignment
-  SPI1.setMISO(KICKER_MISO_PIN);
-  SPI1.begin();
-  pinMode(KICKER_CSN_PIN, OUTPUT);
-  digitalWrite(KICKER_CSN_PIN, HIGH);
-  pinMode(KICKER_RESETN_PIN, OUTPUT);
-  digitalWrite(KICKER_RESETN_PIN, HIGH);
+  kicker.begin();
   // End Initialize Kicker //
 
   // Initialize Screen //
@@ -165,18 +160,13 @@ void loop() {
   kcommand.trigger_mode = control_message.trigger_mode;
   kcommand.shoot_mode = control_message.shoot_mode;
   // Send command
-  SPI1.beginTransaction(settings);
-  digitalWrite(KICKER_CSN_PIN, LOW);
-  uint8_t response = SPI1.transfer(kcommand.pack());
-  digitalWrite(KICKER_CSN_PIN, HIGH);
-  SPI1.endTransaction();
-  // Process response
-  KickerState kstate = KickerState(response);
-  status.kick_healthy = kstate.healthy;
-  status.ball_sense_status = kstate.ball_sensed;
-  kicker_voltage = kstate.current_voltage;
+  kicker.service(kcommand);
+  // Update status
+  status.kick_healthy = kicker.state.healthy;
+  status.ball_sense_status = kicker.state.ball_sensed;
+  kicker_voltage = kicker.state.current_voltage;
   if (DEBUG) Serial.print("Kicker Response: ");
-  if (DEBUG) Serial.println(kstate.to_string());
+  if (DEBUG) Serial.println(kicker.state.to_string());
   // Check for kicker error after some time
   if (!status.kick_healthy && millis() > 5000) error_handler(KickerError);
 

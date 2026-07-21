@@ -185,25 +185,25 @@ public:
     void draw_error(RobotError error);
 
 private:
-    U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2{U8G2_R0, U8X8_PIN_NONE};
+    U8G2_SSD1306_128X64_NONAME_F_HW_I2C _u8g2{U8G2_R0, U8X8_PIN_NONE};
     // Current window for draw_window()
-    Window current_window = Window::Info;
+    Window _current_window = Window::Info;
     // True if good radio
-    bool radio_status = false;
+    bool _radio_status = false;
     // True if good kicker
-    bool kicker_status = false;
+    bool _kicker_status = false;
     // True if kick queued
-    bool kicking = false;
+    bool _kicking = false;
     // Current kicker voltage
-    uint8_t kicker_voltage = 0;
+    uint8_t _kicker_voltage = 0;
     // Current battery percent 0-100
-    uint8_t battery_percent = 0;
+    uint8_t _battery_percent = 0;
     // Current radio success rate
-    uint8_t ack_percent;
+    uint8_t _ack_percent;
     // Robot team
-    Team team = Team::Blue;
+    Team _team = Team::Blue;
     // Robot id
-    uint8_t id = 0;
+    uint8_t _id = 0;
 
     // Colors for team order goes FL, FR, BL, BR
     static constexpr const char* id_colors[16][4] = {

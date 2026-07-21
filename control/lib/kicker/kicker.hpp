@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Arduino.h>
+#include <SPI.h>
 
 // Type of kick to be performed by the kicker
 enum ShootMode {
@@ -62,11 +63,11 @@ struct KickerCommand {
 // TODO: Copy and reformat table from rust docs
 struct KickerState {
     // Voltage of the kicker capacitors
-    uint8_t current_voltage;
+    uint8_t current_voltage = 0;
     // True if kicker breakbeam currently broken
-    bool ball_sensed;
+    bool ball_sensed = false;
     // False if kicker has errored or stopped responding
-    bool healthy;
+    bool healthy = false;
 
     /**
      * Creates a KickerState from the byte returned by kicker SPI
@@ -81,4 +82,48 @@ struct KickerState {
      * @return String representation of kicker state
      */
     String to_string();
+};
+
+
+class Kicker {
+public:
+    // Last read kicker state from servicing
+    KickerState state;
+
+    /**
+     * Kicker constructor
+     * 
+     * @param spi SPI bus the kicker is attached to
+     * @param settings SPISettings to use for transactions
+     * @param cs_pin Chip-select pin for kicker
+     * @param reset_pin Reset pin for kicker
+     * @param miso_pin Optional non-default MISO pin. Pass -1 to leave default
+     * 
+     * @note Currently we only overwrite miso pin, may need mosi pin as well in future
+     */
+    Kicker(SPIClass &spi, SPISettings settings, uint8_t cs_pin, uint8_t reset_pin, int8_t miso_pin = -1);
+
+    /**
+     * Initializes SPI and cs/reset pins
+     */
+    void begin();
+
+    /**
+     * Packs and sends command to Kicker and then updates state from response
+     * 
+     * @param command KickerCommand to send
+     */
+    void service(KickerCommand command);
+
+    /**
+     * Drives reset pin low for 10ms to reset kicker board
+     */
+    void reset();
+
+private:
+    SPIClass &_spi;
+    SPISettings _settings;
+    uint8_t _cs_pin;
+    uint8_t _reset_pin;
+    int8_t _miso_pin;
 };
