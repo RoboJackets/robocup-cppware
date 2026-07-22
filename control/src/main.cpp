@@ -1,3 +1,12 @@
+/*
+TODO: Experiment with interrupt based timing for more uniform actions and less spamming of kicker/motors (note currently the main loop is stable at 10531us however during control can vary +3000us)
+TODO: Condense kicker into just a class and remove structs
+TODO: Add state machine for different operating modes
+TODO: Redo error checking entirely (Have a "current_error" var and just stop motion/kicking if it is set to maintain radio control (maybe))
+TODO: More tests, continue porting old ones and add new ones
+TODO: Clean up debug printing
+*/
+
 #include "main.hpp"
 
 /// Peripherals
@@ -32,7 +41,7 @@ uint8_t batt_uvlo_counter = 0;
 uint32_t iteration = 0;
 // New command from radio interrupt
 volatile bool new_command = false;
-// Timestamp of last command to check radio timeout
+// Timestamp (ms) of last command to check radio timeout
 uint32_t last_command = 0;
 // Kicker voltage
 uint8_t kicker_voltage = 0;
@@ -115,19 +124,8 @@ void setup() {
 
 // Main control loop
 void loop() {
-
-
-  Serial.println("Wheel to bot:");
-    for(int i = 0; i < motion_controller.wheel_to_bot.rows(); i++) {
-        for (int j = 0; j < motion_controller.wheel_to_bot.cols(); j++) {
-            Serial.printf("%.8f\t", motion_controller.wheel_to_bot(i, j));
-        }
-        Serial.println("");
-    }
-
-
-
   uint32_t loop_start = millis();
+  us = 0;
   // Check for radio timeout
   bool radio_timeout = millis() - last_command > DIE_TIME_MS;
 
@@ -177,9 +175,25 @@ void loop() {
   status.kick_healthy = kicker.state.healthy;
   status.ball_sense_status = kicker.state.ball_sensed;
   kicker_voltage = kicker.state.current_voltage;
-  Serial.print("Kicker Response: ");
-  Serial.println(kicker.state.to_string());
+  if (DEBUG) Serial.print("Kicker Response: ");
+  if (DEBUG) Serial.println(kicker.state.to_string());
   // Check for kicker error after some time
+  // Attempt restart on breakbeam blockage
+  if (kicker.state.error == KickerError::BreakbeamBlockage) {
+    Serial.println("BBB detected attempting restart!");
+    for (size_t reset_attempts = 1; reset_attempts < 4; reset_attempts++) {
+      Serial.printf("Kicker Reset Attempt %d\n", reset_attempts);
+      kicker.reset();
+      delay(2000);
+      KickerCommand dummy;
+      kicker.service(dummy); // Clear bad info
+      delay(100);
+      kicker.service(dummy); // Good read
+      Serial.println(kicker_error_to_str(kicker.state.error));
+      if (kicker.state.error == KickerError::None) break;
+    }
+    if (kicker.state.error != KickerError::None) error_handler(_KickerError);
+  }
   // if (!status.kick_healthy && millis() > 5000) error_handler(KickerError);
 
 
@@ -233,15 +247,14 @@ void loop() {
     display.next_window();
   }
   // Currently screen takes ~10ms to update so it gets to live in the main loop
-  us = 0;
   display.clear_buffer();
   display.update_info(status, !radio_timeout, kicker_voltage, acks_to_percent(radio_acks));
   display.draw_header();
   display.draw_window();
   display.send_buffer();
-  if (DEBUG) Serial.printf("Screen update time: %lu us\n", (uint32_t) us);
   
   iteration++;
+  Serial.printf("Loop time: %lu us\n", (uint32_t) us);
   if (DEBUG) Serial.printf("Loop time: %lu ms\n", millis() - loop_start);
 }
 
@@ -257,12 +270,12 @@ void kill_self() {
   KickerCommand kcommand = {
     Kick,
     Immediate,
-    5,
+    10,
     false
   };
-  for (size_t i = 0; i < 10; i++) {
+  for (size_t i = 0; i < 4; i++) {
     kicker.service(kcommand);
-    delay(10);
+    delay(250);
   }
 
   // Kill Power
@@ -302,7 +315,7 @@ void error_handler(RobotError e) {
       case RadioError:
         Serial.println("RADIO ERROR");
       break;
-      case KickerError:
+      case _KickerError:
         Serial.println("KICKER ERROR");
       break;
       default:

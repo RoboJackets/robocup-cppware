@@ -60,6 +60,23 @@ struct KickerCommand {
     String to_string();
 };
 
+// Kicker error enum from kicker code
+enum KickerError {
+    None = 0b11111111, // Should never be used technically, only to send ok to teensy
+    ChargeTimeout = 0b10011,
+    OverVoltage = 0b01101,
+    MajorOverVoltage = 0b11111,
+    ChargeKickOverlap = 0b01010,
+    BreakbeamBlockage = 0b00011,
+    NoCharge = 0b11100,
+    NoDischarge = 0b01011,
+    ContinuousCharging = 0b10111,
+    ContinuousDischarge = 0b00100,
+    Unknown = 0b10101,
+};
+
+const char* kicker_error_to_str(KickerError e);
+
 // TODO: Copy and reformat table from rust docs
 struct KickerState {
     // Voltage of the kicker capacitors
@@ -68,8 +85,8 @@ struct KickerState {
     bool ball_sensed = false;
     // False if kicker has errored or stopped responding
     bool healthy = false;
-
-    uint8_t error = 0;
+    // Current kicker error
+    KickerError error = None;
 
     /**
      * Creates a KickerState from the byte returned by kicker SPI

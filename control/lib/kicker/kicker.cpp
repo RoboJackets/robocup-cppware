@@ -37,16 +37,31 @@ String KickerCommand::to_string() {
     return "Type: " + shootmode_to_str(shoot_mode) + " | Trigger: " + triggermode_to_str(trigger_mode) + " | Strength: " + String(kick_strength) + " | Charge Allowed: " + String(charge_allowed);
 }
 
+const char* kicker_error_to_str(KickerError e) {
+    switch(e) {
+        case None: return "None";
+        case ChargeTimeout: return "ChargeTimeout";
+        case OverVoltage: return "OverVoltage";
+        case MajorOverVoltage: return "MAJOR OVER VOLTAGE";
+        case ChargeKickOverlap: return "ChargeKickOverlap";
+        case BreakbeamBlockage: return "BreakbeamBlockage";
+        case NoCharge: return "NoCharge";
+        case NoDischarge: return "NoDischarge";
+        case ContinuousCharging: return "ContinuousCharging";
+        case ContinuousDischarge: return "ContinuousDischarge";
+        default: return "Unknown";
+    }
+};
 
 KickerState::KickerState(uint16_t raw) {
     current_voltage = (raw & 0x7F) << 1;
     ball_sensed = (raw & (1 << 7)) != 0;
-    healthy = raw != 0;
-    error = (raw >> 8) & 0xFF;
+    error = static_cast<KickerError>((raw >> 8) & 0xFF);
+    healthy = error == KickerError::None;
 }
 
 String KickerState::to_string() {
-    return String("Voltage: ") + current_voltage + " | Ball Sensed: " + ball_sensed + " | Healthy: " + healthy + " | Error: " + error;
+    return String("Voltage: ") + current_voltage + " | Ball Sensed: " + ball_sensed + " | Healthy: " + healthy + " | Error: " + kicker_error_to_str(error);
 }
 
 

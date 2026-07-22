@@ -8,6 +8,6 @@ enum Team {
 enum RobotError {
     NoError,
     RadioError,
-    KickerError,
+    _KickerError,
     
 };

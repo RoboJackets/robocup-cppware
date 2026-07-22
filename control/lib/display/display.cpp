@@ -151,7 +151,7 @@ void Display::draw_error(RobotError error) {
             _u8g2.drawStr((DISPLAY_WIDTH - 5 * 10) / 2, LAST_YELLOW_Y + 16, "RADIO");
             _u8g2.drawStr((DISPLAY_WIDTH - 9 * 10) / 2, LAST_YELLOW_Y + 30, "INIT FAIL");
         break;
-        case RobotError::KickerError:
+        case RobotError::_KickerError:
             _u8g2.drawStr((DISPLAY_WIDTH - 5 * 10) / 2, LAST_YELLOW_Y + 16, "KICKER");
             _u8g2.drawStr((DISPLAY_WIDTH - 11 * 10) / 2, LAST_YELLOW_Y + 30, "NO RESPONSE");
         break;

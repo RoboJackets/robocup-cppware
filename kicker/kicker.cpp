@@ -642,7 +642,7 @@ void kicker_error(KickerError e) {
         hard_shutdown();
     }
     
-    spi_out = 0; // Send "Unhealthy" Command
+    spi_out = e << 8; // Send "Unhealthy" Command
     spi_get_hw(SPI_PORT)->dr = spi_out;
     while (true) {
         if (e != MajorOverVoltage) { // Always check for extreme voltage case
