@@ -2,6 +2,7 @@
 
 #include <Arduino.h>
 #include <SPI.h>
+#include <IntervalTimer.h>
 #include <U8g2lib.h>
 #include <RF24.h>
 #undef printf
@@ -22,3 +23,8 @@ void power_switch_interrupt();
 void kill_self();
 void receive_command();
 void error_handler(RobotError);
+
+
+void motion_isr();
+void kicker_isr();
+void low_priority_isr();

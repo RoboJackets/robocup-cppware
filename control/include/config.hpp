@@ -12,4 +12,8 @@
 // Amount of time robot should keep moving without new command
 #define DIE_TIME_MS 1000
 
-#define CONTROL_FREQ_MS 1000 / 60
+#define MOTION_FREQ_US 1000000 / 60 // 60hz
+
+#define KICKER_FREQ_US 1000000 / 30 // 30hz
+
+#define LOW_PRIO_FREQ_US 1000000 / 2 // 2hz
