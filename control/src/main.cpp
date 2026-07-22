@@ -124,7 +124,6 @@ void setup() {
 
 // Main control loop
 void loop() {
-  uint32_t loop_start = millis();
   us = 0;
   // Check for radio timeout
   bool radio_timeout = millis() - last_command > DIE_TIME_MS;
@@ -254,8 +253,7 @@ void loop() {
   display.send_buffer();
   
   iteration++;
-  Serial.printf("Loop time: %lu us\n", (uint32_t) us);
-  if (DEBUG) Serial.printf("Loop time: %lu ms\n", millis() - loop_start);
+  if (DEBUG) Serial.printf("Loop time: %lu us\n", (uint32_t) us);
 }
 
 // Safe robot shutdown ending with killing motor board
@@ -270,7 +268,7 @@ void kill_self() {
   KickerCommand kcommand = {
     Kick,
     Immediate,
-    10,
+    8,
     false
   };
   for (size_t i = 0; i < 4; i++) {

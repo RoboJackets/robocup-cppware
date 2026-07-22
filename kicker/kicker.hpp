@@ -28,7 +28,7 @@ const char* kick_trigger_to_str(KickTrigger t) {
 };
 
 enum KickerError {
-    None = 0b00000,
+    None = 0b11111111, // Should never be used technically, only to send ok to teensy
     ChargeTimeout = 0b10011,
     OverVoltage = 0b01101,
     MajorOverVoltage = 0b11111,
