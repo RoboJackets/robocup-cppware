@@ -36,7 +36,7 @@ volatile bool break_raw = false;
 // SPI Data
 volatile uint8_t rx_data = 0;
 volatile bool data_ready = false;
-uint8_t spi_out = 0x00;
+uint16_t spi_out = 0x0000;
 
 // Buttons
 long kick_btn_cooldown = 0;
@@ -290,7 +290,7 @@ void init() {
     /// SPI initialisation
     // Mode 3, MSB First
     spi_init(SPI_PORT, SPI_CLK_FREQUENCY);
-    spi_set_format(SPI_PORT, 8, SPI_CPOL_1, SPI_CPHA_1, SPI_MSB_FIRST);
+    spi_set_format(SPI_PORT, 16, SPI_CPOL_1, SPI_CPHA_1, SPI_MSB_FIRST);
     spi_set_slave(SPI_PORT, true);
 
     gpio_set_function(PIN_MISO, GPIO_FUNC_SPI);
@@ -452,7 +452,7 @@ void light_show() {
 // SPI interrupt, sets data ready on new command
 void spi_irq_handler() {
     if (spi_is_readable(SPI_PORT)) {
-        rx_data = spi_get_hw(SPI_PORT)->dr;  // read clears the interrupt
+        rx_data = (uint16_t)spi_get_hw(SPI_PORT)->dr;  // read clears the interrupt
         data_ready = true;
 
         // Reset FIFOs
@@ -509,6 +509,7 @@ float read_voltage() {
 void update_spi_output() {
     spi_out = ((uint8_t) voltage) >> 1;
     spi_out |= break_raw << 7;
+    spi_out |= 0xFF << 8;
     spi_get_hw(SPI_PORT)->dr = spi_out;
 }
 

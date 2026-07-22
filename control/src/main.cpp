@@ -177,8 +177,8 @@ void loop() {
   status.kick_healthy = kicker.state.healthy;
   status.ball_sense_status = kicker.state.ball_sensed;
   kicker_voltage = kicker.state.current_voltage;
-  if (DEBUG) Serial.print("Kicker Response: ");
-  if (DEBUG) Serial.println(kicker.state.to_string());
+  Serial.print("Kicker Response: ");
+  Serial.println(kicker.state.to_string());
   // Check for kicker error after some time
   // if (!status.kick_healthy && millis() > 5000) error_handler(KickerError);
 

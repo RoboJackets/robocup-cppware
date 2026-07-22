@@ -50,7 +50,7 @@ struct KickerCommand {
      * 
      * @return Byte to be sent to kicker
      */
-    uint8_t pack();
+    uint16_t pack();
 
     /**
      * Convert kicker command into a readible String format
@@ -69,12 +69,14 @@ struct KickerState {
     // False if kicker has errored or stopped responding
     bool healthy = false;
 
+    uint8_t error = 0;
+
     /**
      * Creates a KickerState from the byte returned by kicker SPI
      * 
      * @param state Byte response from the kicker
      */
-    KickerState(uint8_t state);
+    KickerState(uint16_t state);
 
     /**
      * Converts kicker state into a readible String format

@@ -22,8 +22,8 @@ String shootmode_to_str(ShootMode type) {
     }
 }
 
-uint8_t KickerCommand::pack() {
-    uint8_t command = 0;
+uint16_t KickerCommand::pack() {
+    uint16_t command = 0;
     command |= shoot_mode;
     command |= trigger_mode;
     command |= kick_strength & 0xF;
@@ -38,14 +38,15 @@ String KickerCommand::to_string() {
 }
 
 
-KickerState::KickerState(uint8_t raw) {
+KickerState::KickerState(uint16_t raw) {
     current_voltage = (raw & 0x7F) << 1;
     ball_sensed = (raw & (1 << 7)) != 0;
     healthy = raw != 0;
+    error = (raw >> 8) & 0xFF;
 }
 
 String KickerState::to_string() {
-    return String("Voltage: ") + current_voltage + " | Ball Sensed: " + ball_sensed + " | Healthy: " + healthy;
+    return String("Voltage: ") + current_voltage + " | Ball Sensed: " + ball_sensed + " | Healthy: " + healthy + " | Error: " + error;
 }
 
 
@@ -70,7 +71,7 @@ void Kicker::begin() {
 void Kicker::service(KickerCommand command) {
     _spi.beginTransaction(_settings);
     digitalWrite(_cs_pin, LOW);
-    uint8_t response = _spi.transfer(command.pack());
+    uint16_t response = _spi.transfer16(command.pack());
     digitalWrite(_cs_pin, HIGH);
     _spi.endTransaction();
     state = KickerState(response);
