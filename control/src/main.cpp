@@ -115,6 +115,18 @@ void setup() {
 
 // Main control loop
 void loop() {
+
+
+  Serial.println("Wheel to bot:");
+    for(int i = 0; i < motion_controller.wheel_to_bot.rows(); i++) {
+        for (int j = 0; j < motion_controller.wheel_to_bot.cols(); j++) {
+            Serial.printf("%.8f\t", motion_controller.wheel_to_bot(i, j));
+        }
+        Serial.println("");
+    }
+
+
+
   uint32_t loop_start = millis();
   // Check for radio timeout
   bool radio_timeout = millis() - last_command > DIE_TIME_MS;
@@ -168,7 +180,7 @@ void loop() {
   if (DEBUG) Serial.print("Kicker Response: ");
   if (DEBUG) Serial.println(kicker.state.to_string());
   // Check for kicker error after some time
-  if (!status.kick_healthy && millis() > 5000) error_handler(KickerError);
+  // if (!status.kick_healthy && millis() > 5000) error_handler(KickerError);
 
 
   /// Service the radio

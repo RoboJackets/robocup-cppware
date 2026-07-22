@@ -107,10 +107,10 @@ Vector3f MotionControl::encoder_estimate(Vector4i encoder_velocities) {
     return wheel_to_bot * meters;
 }
 
-inline float ticks_to_meters(int32_t value) {
+float ticks_to_meters(int32_t value) {
     return float(value) / TICKS_PER_ROTATION * 4.0 * PI * WHEEL_RADIUS;
 }
 
-inline int32_t meters_to_ticks(float value) {
+int32_t meters_to_ticks(float value) {
     return int(value / (4.0 * PI * WHEEL_RADIUS) * TICKS_PER_ROTATION);
 }

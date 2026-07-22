@@ -117,11 +117,11 @@ struct MotionControl {
  * 
  * @param value ticks/s
  */
-inline float ticks_to_meters(int32_t);
+float ticks_to_meters(int32_t);
 
 /**
  * Convert m/s to ticks/s
  * 
  * @param value m/s
  */
-inline int32_t meters_to_ticks(float);
+int32_t meters_to_ticks(float);
