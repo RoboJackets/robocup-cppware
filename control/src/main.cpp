@@ -1,8 +1,5 @@
 /*
-TODO: Experiment with interrupt based timing for more uniform actions and less spamming of kicker/motors (note currently the main loop is stable at 10531us however during control can vary +3000us)
-TODO: Condense kicker into just a class and remove structs
 TODO: Add state machine for different operating modes
-TODO: Redo error checking entirely (Have a "current_error" var and just stop motion/kicking if it is set to maintain radio control (maybe))
 TODO: More tests, continue porting old ones and add new ones
 TODO: Clean up debug printing
 */
@@ -78,15 +75,15 @@ void setup() {
   for (auto& motor : motors) {
     motor.begin();
   }
-  // End Initialize Motor Board
+  // End Initialize Motor Board //
 
   // Initialize Kicker //
   kicker.begin();
   // End Initialize Kicker //
 
-  // Initialize Screen //
+  // Initialize Display //
   display.begin(1000000);
-  // End Initialize Screen //
+  // End Initialize Display //
 
   // Initialize Serial //
   Serial.begin(115200);
@@ -115,7 +112,7 @@ void setup() {
   // Tie interrupt to radio receive
   pinMode(RADIO_IRQ_PIN, INPUT_PULLUP);
   attachInterrupt(digitalPinToInterrupt(RADIO_IRQ_PIN), receive_command, FALLING);
-  radio.setStatusFlags(RF24_RX_DR);
+  radio.setStatusFlags(RF24_RX_DR); // Only care about data ready
 
   // Ready radio to receive commands
   radio.setPALevel(RF24_PA_LOW);
@@ -128,7 +125,7 @@ void setup() {
   if (DEBUG) radio.printDetails();
   // Initialize acks array to true
   memset(radio_acks, true, sizeof(radio_acks));
-  // End Initialize Radio
+  // End Initialize Radio //
 
   // Initialize Interrupt Timers //
   motion_timer.begin(motion_isr, MOTION_FREQ_US);

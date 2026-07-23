@@ -1,1 +1,1 @@
-C++ port of the Robojackets Robocup firmware stack.
+Main controller firmware
