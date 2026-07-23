@@ -53,20 +53,8 @@ const char* kicker_error_to_str(KickerError e) {
     }
 };
 
-KickerState::KickerState(uint16_t raw) {
-    current_voltage = (raw & 0x7F) << 1;
-    ball_sensed = (raw & (1 << 7)) != 0;
-    error = static_cast<KickerError>((raw >> 8) & 0xFF);
-    healthy = error == KickerError::None;
-}
-
-String KickerState::to_string() {
-    return String("Voltage: ") + current_voltage + " | Ball Sensed: " + ball_sensed + " | Healthy: " + healthy + " | Error: " + kicker_error_to_str(error);
-}
-
-
 Kicker::Kicker(SPIClass &spi, SPISettings settings, uint8_t cs_pin, uint8_t reset_pin, int8_t miso_pin)
-    : state(0), _spi(spi), _settings(settings), _cs_pin(cs_pin), _reset_pin(reset_pin), _miso_pin(miso_pin) {}
+    : _spi(spi), _settings(settings), _cs_pin(cs_pin), _reset_pin(reset_pin), _miso_pin(miso_pin) {}
 
 void Kicker::begin() {
     // Check for non-default spi pin
@@ -89,11 +77,22 @@ void Kicker::service(KickerCommand command) {
     uint16_t response = _spi.transfer16(command.pack());
     digitalWrite(_cs_pin, HIGH);
     _spi.endTransaction();
-    state = KickerState(response);
+    Kicker::update_state(response);
 }
 
 void Kicker::reset() {
     digitalWrite(_reset_pin, LOW);
     delay(10);
     digitalWrite(_reset_pin, HIGH);
+}
+
+String Kicker::state_string() {
+    return String("Voltage: ") + current_voltage + " | Ball Sensed: " + ball_sensed + " | Healthy: " + healthy + " | Error: " + kicker_error_to_str(error);
+}
+
+void Kicker::update_state(uint16_t raw) {
+    current_voltage = (raw & 0x7F) << 1;
+    ball_sensed = (raw & (1 << 7)) != 0;
+    error = static_cast<KickerError>((raw >> 8) & 0xFF);
+    healthy = error == KickerError::None;
 }

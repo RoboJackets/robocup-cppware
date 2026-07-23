@@ -77,8 +77,8 @@ enum KickerError {
 
 const char* kicker_error_to_str(KickerError e);
 
-// TODO: Copy and reformat table from rust docs
-struct KickerState {
+class Kicker {
+public:
     // Voltage of the kicker capacitors
     uint8_t current_voltage = 0;
     // True if kicker breakbeam currently broken
@@ -87,27 +87,6 @@ struct KickerState {
     bool healthy = false;
     // Current kicker error
     KickerError error = None;
-
-    /**
-     * Creates a KickerState from the byte returned by kicker SPI
-     * 
-     * @param state Byte response from the kicker
-     */
-    KickerState(uint16_t state);
-
-    /**
-     * Converts kicker state into a readible String format
-     * 
-     * @return String representation of kicker state
-     */
-    String to_string();
-};
-
-
-class Kicker {
-public:
-    // Last read kicker state from servicing
-    KickerState state;
 
     /**
      * Kicker constructor
@@ -139,10 +118,24 @@ public:
      */
     void reset();
 
+    /**
+     * Convert kicker state information into a readible String format
+     * 
+     * @return String representation of kicker state
+     */
+    String state_string();
+
 private:
     SPIClass &_spi;
     SPISettings _settings;
     uint8_t _cs_pin;
     uint8_t _reset_pin;
     int8_t _miso_pin;
+
+    /**
+     * Updates kicker state information from raw SPI input
+     * 
+     * @param raw SPI reponse from kicker servicing
+     */
+    void update_state(uint16_t raw);
 };

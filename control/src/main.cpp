@@ -52,7 +52,7 @@ uint8_t kicker_voltage = 0;
 // For timing profiling
 elapsedMicros us;
 // Radio timeout
-bool radio_timeout;
+bool radio_timeout = true;
 // History of good/bad sends
 bool radio_acks[100];
 // Index of radio history array
@@ -311,11 +311,11 @@ void kicker_isr() {
   // Send command
   kicker.service(kcommand);
   // Update status
-  status.kick_healthy = kicker.state.healthy;
-  status.ball_sense_status = kicker.state.ball_sensed;
-  kicker_voltage = kicker.state.current_voltage;
+  status.kick_healthy = kicker.healthy;
+  status.ball_sense_status = kicker.ball_sensed;
+  kicker_voltage = kicker.current_voltage;
   if (DEBUG) Serial.print("Kicker Response: ");
-  if (DEBUG) Serial.println(kicker.state.to_string());
+  if (DEBUG) Serial.println(kicker.state_string());
   // // Check for kicker error after some time
   // // Attempt restart on breakbeam blockage
   // if (kicker.state.error == KickerError::BreakbeamBlockage) {
