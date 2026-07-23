@@ -154,15 +154,27 @@ void loop() {
     if (radio.available()) {
       uint8_t data[CONTROL_MESSAGE_SIZE];
       radio.read(&data, CONTROL_MESSAGE_SIZE);
+
+      ControlMessage temp_ctrl;
+      temp_ctrl.unpack(data);
+      // Safe write
+      noInterrupts();
       // Overwrite current command with new command
-      control_message.unpack(data);
+      control_message = temp_ctrl;
+      interrupts();
+      
       if (DEBUG) Serial.println(control_message.to_string());
       // Send status response
       if (DEBUG) Serial.println("Sending response!");
       uint8_t response[ROBOT_STATUS_SIZE];
       // Immediate confirmation response
       status.kick_status = control_message.trigger_mode != Disabled;
-      status.pack(response);
+      RobotStatusMessage temp_status;
+      // Safe copy
+      noInterrupts();
+      temp_status = status;
+      interrupts();
+      temp_status.pack(response);
       radio.stopListening();
       radio.setPayloadSize(ROBOT_STATUS_SIZE);
       bool ack = radio.write(&response, ROBOT_STATUS_SIZE);
@@ -190,6 +202,8 @@ void loop() {
 
 // Safe robot shutdown ending with killing motor board
 void kill_self() {
+  // Stop interrupts
+  noInterrupts();
   // Stop motors
   Serial.println("Stopping motors!");
   for (auto& motor : motors) {
@@ -211,6 +225,9 @@ void kill_self() {
   // Kill Power
   Serial.println("Killing Motor Board!");
   digitalWrite(KILLN_PIN, LOW);
+
+  // Prevent further actions
+  while(1) {delay(1);}
 }
 
 // Radio interrupt
