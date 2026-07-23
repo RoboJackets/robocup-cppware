@@ -41,7 +41,7 @@ RobotStatusMessage status;
 ControlMessage control_message;
 // # of times battery undervoltage detected
 uint8_t batt_uvlo_counter = 0;
-// Loop count
+// Loop count just for screen swapping rn
 uint32_t iteration = 0;
 // New command from radio interrupt
 volatile bool new_command = false;
@@ -57,7 +57,10 @@ bool radio_timeout;
 bool radio_acks[100];
 // Index of radio history array
 uint8_t radio_acks_idx = 0;
-
+// Temp toggle to stop just motion and kicker isrs
+bool idle = false;
+// Current error
+RobotError current_error = NoError;
 
 void setup() {
   // Initialize Motor Board //
@@ -106,7 +109,7 @@ void setup() {
   // Initialize radio //
   if(!radio.begin()) {
     Serial.println("Radio Init Failure!");
-    error_handler(RadioError);
+    current_error = RadioError;
   }
 
   // Tie interrupt to radio receive
@@ -140,6 +143,15 @@ void setup() {
 // Main control loop
 void loop() {
   us = 0;
+
+  // Check errors
+  if (current_error != NoError) {
+    // Stop motion and kicker
+    idle = true;
+    error_handler(current_error);
+  }
+
+
   // Check for radio timeout
   radio_timeout = millis() - last_command > DIE_TIME_MS;
 
@@ -238,43 +250,38 @@ void receive_command() {
 // Universal error handler
 // TODO: This is trash, redo
 void error_handler(RobotError e) {
-  // Unrecoverable by default
-  while(1) {
-    // Alert to screen
-    display.clear_buffer();
-    display.draw_error(e);
-    display.send_buffer();
+  // Alert to screen
+  display.clear_buffer();
+  display.draw_error(e);
+  display.send_buffer();
 
-    // Stop motors
-    for (auto& motor : motors) {
-      motor.send_command(0);
-    }
-
-    // Stop kicker
-    SPI1.beginTransaction(settings);
-    digitalWrite(KICKER_CSN_PIN, LOW);
-    uint8_t _ = SPI1.transfer(KickerCommand().pack());
-    digitalWrite(KICKER_CSN_PIN, HIGH);
-    SPI1.endTransaction();
-
-    // Error specific handling
-    switch (e) {
-      case RadioError:
-        Serial.println("RADIO ERROR");
-      break;
-      case _KickerError:
-        Serial.println("KICKER ERROR");
-      break;
-      default:
-
-      break;
-    }
-
-    delay(500);
+  // Stop motors
+  for (auto& motor : motors) {
+    motor.send_command(0);
   }
+
+  // Stop kicker
+  kicker.service(KickerCommand());
+
+  // Error specific handling
+  switch (e) {
+    case RadioError:
+      Serial.println("RADIO ERROR");
+    break;
+    case RecoverableKicker:
+    case UnrecoverableKicker:
+      Serial.println("KICKER ERROR");
+    break;
+    default:
+
+    break;
+  }
+
+  delay(500);
 } 
 
 void motion_isr() {
+  if (idle) return;
   /// Service the motors
   // Calculate wheel velocities, zero if past die time
   Vector3f body_velocities = (radio_timeout ? Vector3f::Zero() : control_message.get_velocity());
@@ -292,6 +299,7 @@ void motion_isr() {
 }
 
 void kicker_isr() {
+  if (idle) return;
   /// Service the kicker
   // Construct command 
   KickerCommand kcommand;
@@ -308,27 +316,28 @@ void kicker_isr() {
   kicker_voltage = kicker.state.current_voltage;
   if (DEBUG) Serial.print("Kicker Response: ");
   if (DEBUG) Serial.println(kicker.state.to_string());
-  // Check for kicker error after some time
-  // Attempt restart on breakbeam blockage
-  if (kicker.state.error == KickerError::BreakbeamBlockage) {
-    Serial.println("BBB detected attempting restart!");
-    for (size_t reset_attempts = 1; reset_attempts < 4; reset_attempts++) {
-      Serial.printf("Kicker Reset Attempt %d\n", reset_attempts);
-      kicker.reset();
-      delay(2000);
-      KickerCommand dummy;
-      kicker.service(dummy); // Clear bad info
-      delay(100);
-      kicker.service(dummy); // Good read
-      Serial.println(kicker_error_to_str(kicker.state.error));
-      if (kicker.state.error == KickerError::None) break;
-    }
-    if (kicker.state.error != KickerError::None) error_handler(_KickerError);
-  }
-  // if (!status.kick_healthy && millis() > 5000) error_handler(KickerError);
+  // // Check for kicker error after some time
+  // // Attempt restart on breakbeam blockage
+  // if (kicker.state.error == KickerError::BreakbeamBlockage) {
+  //   Serial.println("BBB detected attempting restart!");
+  //   for (size_t reset_attempts = 1; reset_attempts < 4; reset_attempts++) {
+  //     Serial.printf("Kicker Reset Attempt %d\n", reset_attempts);
+  //     kicker.reset();
+  //     delay(2000);
+  //     KickerCommand dummy;
+  //     kicker.service(dummy); // Clear bad info
+  //     delay(100);
+  //     kicker.service(dummy); // Good read
+  //     Serial.println(kicker_error_to_str(kicker.state.error));
+  //     if (kicker.state.error == KickerError::None) break;
+  //   }
+  //   if (kicker.state.error != KickerError::None) error_handler(UnrecoverableKicker);
+  // }
+  // // if (!status.kick_healthy && millis() > 5000) error_handler(KickerError);
 }
 
 void low_priority_isr() {
+  iteration++;
   /// Poll battery voltage
   uint16_t raw_batt = analogRead(BATTERY_SENSE_PIN);
   float battery_voltage = raw_batt * 3.3 / 1023.0;
@@ -348,7 +357,7 @@ void low_priority_isr() {
   /// Update screen
   // TODO: Maybe better idea than cycling between the two screens
   // however it is currently built out to accept more
-  // TODO: Switch to interrupt timer if worth?
+  if (current_error != NoError) return;
   if (iteration != 0 && iteration % 10000 == 0) {
     display.next_window();
   }
@@ -359,5 +368,5 @@ void low_priority_isr() {
   display.draw_window();
   display.send_buffer();
 
-  iteration++;
+
 }
