@@ -15,6 +15,9 @@
 #define VOLT_MAX 180
 #define VOLT_MIN 10
 #define KALPHA_VOLT 64 // KALHPA / 255 of last value used for averaging | Max 255
+#define VOLT_HIST_SIZE 20 // Decides how far back can be checked: SIZE * 25ms (check timing if changed)
+#define SHORT_HIST_DIFF 5 // How far back to look for short diff in voltage (val * 25ms)
+#define LONG_HIST_DIFF 20 // How far back to look for long diff in voltage (val * 25ms)
 
 
 #define MAX_KICK_TIME 28200 // us
@@ -28,16 +31,19 @@
 #define CHARGE_TIME_MAX 20000 // ms
 #define OVER_VOLTAGE 210
 #define VERY_OVER_VOLTAGE 250
-#define VOLT_TOLERANCE 3 // Used for comparing to old_voltage
+#define VOLT_TOLERANCE 2 // Used for comparing to old_voltage
 #define VOLT_TOLERANCE_CHARGE 10
-#define NO_CHARGE_COOLDOWN 1000 // ms
+#define VOLT_TOLERANCE_KICK 5 // Minumum required volt drop for kick
+#define NO_CHARGE_COOLDOWN 500 // ms
+#define CONTINUOUS_CHARGE_COOLDOWN 500 // ms
+#define LARGEST_PASSIVE_DROP 3 // (v/500ms) Casual observation shows normally around 2v/s, so 6v/s is generous
 
 // Enables for specific errors
 #define E_OVER_VOLTAGE 1
 #define E_MAJOR_OVER_VOLTAGE 1
-#define E_CONTINUOUS_CHARGING 0
-#define E_CONTINUOUS_DISCHARGING 0
-#define E_NO_CHARGE 0
+#define E_CONTINUOUS_CHARGING 1
+#define E_CONTINUOUS_DISCHARGING 1
+#define E_NO_CHARGE 1
 #define E_CHARGE_TIMEOUT 1
-#define E_NO_DISCHARGE 0
+#define E_NO_DISCHARGE 1
 #define E_BREAK_BLOCKAGE 1
