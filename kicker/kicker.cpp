@@ -27,9 +27,7 @@ void kicker_error(KickerError);
 void manual_mode();
 
 // Breakbream
-volatile bool checking_break = true;
 volatile bool break_triggered = false;
-volatile bool break_raw = false;
 
 // Voltage
 volatile float current_voltage = 0;
@@ -90,13 +88,10 @@ void core1_entry() {
 
         if (smoothed_break_diff < BREAK_THRESHOLD) {
             gpio_put(BREAK_LED, 0);
-            if (checking_break) {
-                break_triggered = true;
-            }
-            break_raw = true;
+            break_triggered = true;
         } else {
             gpio_put(BREAK_LED, 1);
-            break_raw = false;
+            break_triggered = false;
         }
 
         #if DEBUG && EXTRA_INFO
@@ -219,9 +214,6 @@ int main() {
         /// DRIVE OUTPUTS
         update_spi_output();
 
-        // Allow setting the break trigger
-        checking_break = command.kick_trigger == Breakbeam && to_ms_since_boot(get_absolute_time()) - 1000 > last_kick;
-
         // Kick when requested, priority over charging
         if (command.kick_trigger != Disabled && to_ms_since_boot(get_absolute_time()) - KICK_COOLDOWN > last_kick) {
             if (charging && !(command.kick_trigger == Breakbeam && !break_triggered)) { // Disable charging when about to kick
@@ -235,7 +227,6 @@ int main() {
                 kick(command.kick_strength, command.kick_type);
             } else if (command.kick_trigger == Breakbeam && break_triggered) {
                 kick(command.kick_strength, command.kick_type);
-                break_triggered = false;
             }
         }
 
@@ -288,11 +279,11 @@ int main() {
                 printf("Charge Cooldown: %d\n", (CHARGE_COOLDOWN + last_charge > sys_time ? CHARGE_COOLDOWN - (sys_time - last_charge) : 0));
                 printf("Kick Cooldown: %d\n", (KICK_COOLDOWN + last_kick > sys_time ? KICK_COOLDOWN - (sys_time - last_kick) : 0));
                 printf("Charging: %s\n", (charging ? "TRUE" : "FALSE"));
-                printf("Break Checking: %s | Break Triggered: %s\n", (checking_break ? "TRUE" : "FALSE"), (break_triggered ? "TRUE" : "FALSE"));
+                printf("Break Checking: %s | Break Triggered: %s\n", (command.kick_trigger == KickTrigger::Breakbeam ? "TRUE" : "FALSE"), (break_triggered ? "TRUE" : "FALSE"));
                 printf("=======================================================\n");
             }
         #endif
-
+            
         count++;
         sleep_ms(1);
     }
@@ -392,13 +383,9 @@ void startup() {
     light_show();
 
     // Test Breakbeam
-    checking_break = true;
-    sleep_ms(100);
     if (E_BREAK_BLOCKAGE && break_triggered) {
         kicker_error(BreakbeamBlockage);
     }
-    checking_break = false;
-    break_triggered = false;
 
     // Run test cycle
     uint64_t debug_time = to_ms_since_boot(get_absolute_time());
@@ -480,22 +467,10 @@ uint16_t read_voltage() {
     return voltage_val;
 }
 
-// // Reads voltage pin and converts to voltage along with basic rolling average to smooth input
-// float read_voltage() {
-//     uint16_t raw = read_voltage_raw();
-//     float voltage_new = VOLT_CONVERSION * raw;
-//     float voltage_norm = ((255 - KALPHA_VOLT) * voltage + KALPHA_VOLT * voltage_new) / 255;
-//     #if DEBUG && EXTRA_INFO
-//         printf("Volt Raw: %d | Volt Actual: %.2f | Volt Normalized: %.2f\n", raw, voltage_new, voltage_norm);
-//     #endif
-
-//     return voltage_norm;
-// }
-
 // Sets the data on the spi to be read by the teensy
 void update_spi_output() {
     spi_out = ((uint8_t) current_voltage) >> 1;
-    spi_out |= break_raw << 7;
+    spi_out |= break_triggered << 7;
     spi_out |= 0xFF << 8;
     spi_get_hw(SPI_PORT)->dr = spi_out;
 }
