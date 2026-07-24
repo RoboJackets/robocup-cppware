@@ -102,6 +102,12 @@ void core1_entry() {
         int16_t raw_voltage = read_voltage();
         float new_voltage = raw_voltage * VOLT_CONVERSION;
         smoothed_voltage = (voltage_seeded ? ((255 - KALPHA_VOLT) * smoothed_voltage + KALPHA_VOLT * new_voltage) / 255 : new_voltage);
+        if (!voltage_seeded) {
+            for (size_t i = 0; i < VOLT_HIST_SIZE; i++) {
+                voltage_history[i] = new_voltage;
+            }
+        }
+        voltage_seeded = true;
         current_voltage = smoothed_voltage;
         voltage_history[voltage_history_index] = smoothed_voltage;
         voltage_history_index = (voltage_history_index + 1) % VOLT_HIST_SIZE;

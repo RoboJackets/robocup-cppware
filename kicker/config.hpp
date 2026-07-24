@@ -14,7 +14,7 @@
 #define VOLT_CONVERSION 250 / 2.025 * VOLT_RANGE // Voltage scale with divider values
 #define VOLT_MAX 180
 #define VOLT_MIN 10
-#define KALPHA_VOLT 64 // KALHPA / 255 of last value used for averaging | Max 255
+#define KALPHA_VOLT 200 // 1 - KALHPA / 255 of last value used for averaging | Max 255
 #define VOLT_HIST_SIZE 20 // Decides how far back can be checked: SIZE * 25ms (check timing if changed)
 #define SHORT_HIST_DIFF 5 // How far back to look for short diff in voltage (val * 25ms)
 #define LONG_HIST_DIFF 20 // How far back to look for long diff in voltage (val * 25ms)
