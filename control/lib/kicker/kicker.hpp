@@ -118,6 +118,8 @@ public:
      */
     void reset();
 
+    bool reset_error();
+
     /**
      * Convert kicker state information into a readible String format
      * 

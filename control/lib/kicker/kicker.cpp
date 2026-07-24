@@ -96,3 +96,19 @@ void Kicker::update_state(uint16_t raw) {
     error = static_cast<KickerError>((raw >> 8) & 0xFF);
     healthy = error == KickerError::None;
 }
+
+static uint8_t reset_attempts = 0;
+bool Kicker::reset_error() {
+    if (reset_attempts >= 3) return false;
+    for (int i = 0; i < 3; i++) {
+        Serial.printf("Kicker Reset Attempt: %d\n", reset_attempts);
+        Kicker::reset();
+        delay(2000);
+        Kicker::service(KickerCommand());
+        delay(100);
+        Kicker::service(KickerCommand());
+        if (error == KickerError::None) return true;
+        reset_attempts++;
+    }
+    return false;
+}

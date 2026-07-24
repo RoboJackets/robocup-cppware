@@ -146,6 +146,9 @@ void loop() {
     // Stop motion and kicker
     idle = true;
     error_handler(current_error);
+  } else {
+    // Movement allowed in event of error correction
+    idle = false;
   }
 
 
@@ -266,8 +269,16 @@ void error_handler(RobotError e) {
       Serial.println("RADIO ERROR");
     break;
     case RecoverableKicker:
+      Serial.println("RECOVERALBE KICKER ERROR ATTEMPTING RESTART");
+      if (kicker.reset_error()) {
+        Serial.println("Recovered kicker!");
+        current_error = NoError;
+      } else {
+        current_error = UnrecoverableKicker;
+      }
+    break;
     case UnrecoverableKicker:
-      Serial.println("KICKER ERROR");
+      Serial.println("UNRECOVERABLE KICKER ERROR");
     break;
     default:
 
@@ -313,24 +324,11 @@ void kicker_isr() {
   kicker_voltage = kicker.current_voltage;
   if (DEBUG) Serial.print("Kicker Response: ");
   if (DEBUG) Serial.println(kicker.state_string());
-  // // Check for kicker error after some time
-  // // Attempt restart on breakbeam blockage
-  // if (kicker.state.error == KickerError::BreakbeamBlockage) {
-  //   Serial.println("BBB detected attempting restart!");
-  //   for (size_t reset_attempts = 1; reset_attempts < 4; reset_attempts++) {
-  //     Serial.printf("Kicker Reset Attempt %d\n", reset_attempts);
-  //     kicker.reset();
-  //     delay(2000);
-  //     KickerCommand dummy;
-  //     kicker.service(dummy); // Clear bad info
-  //     delay(100);
-  //     kicker.service(dummy); // Good read
-  //     Serial.println(kicker_error_to_str(kicker.state.error));
-  //     if (kicker.state.error == KickerError::None) break;
-  //   }
-  //   if (kicker.state.error != KickerError::None) error_handler(UnrecoverableKicker);
-  // }
-  // // if (!status.kick_healthy && millis() > 5000) error_handler(KickerError);
+  if (kicker.error == BreakbeamBlockage) {
+    current_error = RecoverableKicker;
+  } else if (kicker.error != KickerError::None) {
+    current_error = UnrecoverableKicker;
+  }
 }
 
 void low_priority_isr() {
