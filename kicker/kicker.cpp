@@ -114,8 +114,6 @@ void core1_entry() {
 
         short_past_voltage = voltage_history[(voltage_history_index + VOLT_HIST_SIZE - SHORT_HIST_DIFF) % VOLT_HIST_SIZE];
         long_past_voltage = voltage_history[(voltage_history_index + VOLT_HIST_SIZE - LONG_HIST_DIFF) % VOLT_HIST_SIZE];
-
-        
     }
 }
 

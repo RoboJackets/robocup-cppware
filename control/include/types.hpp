@@ -10,5 +10,5 @@ enum RobotError {
     RadioError,
     RecoverableKicker,
     UnrecoverableKicker,
-    
+    BatteryUndervolt,
 };

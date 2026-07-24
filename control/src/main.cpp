@@ -280,8 +280,11 @@ void error_handler(RobotError e) {
     case UnrecoverableKicker:
       Serial.println("UNRECOVERABLE KICKER ERROR");
     break;
+    case BatteryUndervolt:
+      Serial.println("BATTERY UNDERVOLTAGE ERROR!");
+    break;
     default:
-
+      Serial.println("UNKNOWN ERROR!");
     break;
   }
 
@@ -326,7 +329,7 @@ void kicker_isr() {
   if (DEBUG) Serial.println(kicker.state_string());
   if (kicker.error == BreakbeamBlockage) {
     current_error = RecoverableKicker;
-  } else if (kicker.error != KickerError::None) {
+  } else if (kicker.error != KickerError::None && millis() >= 5000) {
     current_error = UnrecoverableKicker;
   }
 }
@@ -345,7 +348,7 @@ void low_priority_isr() {
     batt_uvlo_counter++;
     if (batt_uvlo_counter > BATT_UVLO_THRESHOLD) {
       Serial.println("Undervoltage Detected!");
-      kill_self();
+      current_error = BatteryUndervolt;
     }
   }
 
