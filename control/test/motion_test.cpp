@@ -13,6 +13,11 @@ void tearDown(void) {
     // clean stuff up here
 }
 
+// 8 decimal precision is all that is needed
+bool float_compare(float a, float b) {
+    return (int(a * 100000000) == int(b * 100000000));
+}
+
 void test_bot_to_wheel() {
     MotionControl motion_control = MotionControl();
 
@@ -39,15 +44,15 @@ void test_wheel_to_bot() {
 }
 
 void test_ticks_to_meters() {
-    TEST_ASSERT_TRUE(ticks_to_meters(6200) == 1.0 * PI * 2.0 * 2.0 * WHEEL_RADIUS);
+    TEST_ASSERT_TRUE(float_compare(ticks_to_meters(TICKS_PER_ROTATION), 1.0 * PI * 2.0 * 2.0 * WHEEL_RADIUS));
 }
 
 void test_meters_to_ticks() {
-    TEST_ASSERT_TRUE(meters_to_ticks(1.0 * PI * 2.0 * 2.0 * WHEEL_RADIUS) == 6200);
+    TEST_ASSERT_TRUE(meters_to_ticks(1.0 * PI * 2.0 * 2.0 * WHEEL_RADIUS) == TICKS_PER_ROTATION);
 }
 
 void test_conversions() {
-    TEST_ASSERT_TRUE(meters_to_ticks(ticks_to_meters(6200)) == 6200);
+    TEST_ASSERT_TRUE(meters_to_ticks(ticks_to_meters(TICKS_PER_ROTATION)) == TICKS_PER_ROTATION);
 }
 
 int main( int argc, char **argv) {

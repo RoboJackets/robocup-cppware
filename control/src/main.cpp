@@ -153,7 +153,6 @@ void loop() {
     idle = false;
   }
 
-
   // Check for radio timeout
   radio_timeout = millis() - last_command > DIE_TIME_MS;
 
