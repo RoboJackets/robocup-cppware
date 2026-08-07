@@ -5,6 +5,8 @@
 /// Battery safety checks
 // At 2.372V, our batteries have depleted to 18.5V (see voltage divider in schematics)
 #define MIN_BATTERY_VOLTAGE 2.384615
+// At 2.244V, our batteries have depleted to 17.5V, this should be the absolute lowest voltage
+#define UNSAFE_BATTERY_VOLTAGE 2.243784
 // Maximum Voltage of batteries is roughly 2.69
 #define MAX_BATTERY_VOLTAGE 2.69
 // Number of times the battery voltage can be measured under min before suicide

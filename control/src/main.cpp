@@ -280,6 +280,10 @@ void low_priority_isr() {
     if (batt_uvlo_counter > BATT_UVLO_THRESHOLD) {
       Serial.println("Undervoltage Detected!");
       current_error = BatteryUndervolt;
+      // Force shutdown at too low a battery
+      if (battery_voltage < UNSAFE_BATTERY_VOLTAGE) {
+        kill_self();
+      }
     }
   } else {
     batt_uvlo_counter = 0;
