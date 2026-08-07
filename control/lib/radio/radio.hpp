@@ -54,6 +54,23 @@ static const unsigned char ROBOT_RADIO_ADDRESSES[2][6][5] = {
     }
 };
 
+/**
+ * The Robot Status Message is sent back from the robot's whenever they receive communication
+ * to let software know that they are doing good.
+ *
+ * The RobotStatusMessage has the following format:
+ * +---------+---------+---------+---------+---------+---------+---------+---------+
+ * |    7    |    6    |    5    |    4    |    3    |    2    |    1    |    0    |
+ * +---------+---------+---------+---------+---------+---------+---------+---------+
+ * | team    | robot_id                              | b_sense | k_status| k_health|
+ * +---------+---------+---------+---------+---------+---------+---------+---------+
+ * | battery_voltage                                                               |
+ * +---------+---------+---------+---------+---------+---------+---------+---------+
+ * | motor_errors                                    | fpga_s  | unused            |
+ * +---------+---------+---------+---------+---------+---------+---------+---------+
+ *
+ * Size = 3 Bytes
+ */
 struct RobotStatusMessage {
     // Team of robot (0 blue : 1 yellow)
     Team team = Team::Blue;
@@ -69,7 +86,7 @@ struct RobotStatusMessage {
     uint8_t battery_percent = 0;
     // Motor errors
     uint8_t motor_errors = 0;
-    // Status of FPGA
+    // Status of FPGA (Legacy)
     bool fpga_status = false;
 
     /**
@@ -80,6 +97,36 @@ struct RobotStatusMessage {
     void pack(uint8_t (&pkg)[ROBOT_STATUS_SIZE]);
 };
 
+/**
+ * The Control Message is Sent from the Base Station to the Robots.
+ *
+ * The Packed Format of this message is as follows:
+ * +---------+---------+---------+---------+---------+---------+---------+---------+
+ * |    7    |    6    |    5    |    4    |    3    |    2    |    1    |    0    |
+ * +---------+---------+---------+---------+---------+---------+---------+---------+
+ * | team    | robot id                              | shoot_m | trigger_mode      |
+ * +---------+---------+---------+---------+---------+---------+---------+---------+
+ * | body_x (lsb)                                                                  |
+ * +---------+---------+---------+---------+---------+---------+---------+---------+
+ * | body_x (msb)                                                                  |
+ * +---------+---------+---------+---------+---------+---------+---------+---------+
+ * | body_y (lsb)                                                                  |
+ * +---------+---------+---------+---------+---------+---------+---------+---------+
+ * | body_y (msb)                                                                  |
+ * +---------+---------+---------+---------+---------+---------+---------+---------+
+ * | body_w (lsb)                                                                  |
+ * +---------+---------+---------+---------+---------+---------+---------+---------+
+ * | body_w (msb)                                                                  |
+ * +---------+---------+---------+---------+---------+---------+---------+---------+
+ * | dribbler_speed                                                                |
+ * +---------+---------+---------+---------+---------+---------+---------+---------+
+ * | kick_strength                                                                 |
+ * +---------+---------+---------+---------+---------+---------+---------+---------+
+ * | role              | mode                                                      |
+ * +---------+---------+---------+---------+---------+---------+---------+---------+
+ *
+ * Size = 80 Bits = 10 Bytes
+ */
 struct ControlMessage {
     // Team of robot (0 blue : 1 yellow)
     Team team = Team::Blue;
@@ -99,9 +146,9 @@ struct ControlMessage {
     int8_t dribbler_speed = 0;
     // Kick strength 0-15
     uint8_t kick_strength = 0;
-    // Role of robot
+    // Role of robot (Legacy)
     uint8_t role = 0;
-    // Mode, 0 is normal, rest are for debug
+    // Mode, 0 is normal, rest are for debug (Legacy?)
     uint8_t mode = 0;
 
     /**

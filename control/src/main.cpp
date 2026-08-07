@@ -1,7 +1,7 @@
 /*
 TODO: Add state machine for different operating modes
 TODO: More tests, continue porting old ones and add new ones
-TODO: Clean up debug printing
+TODO: Clean up debug printing so it isn't slowing ISR functions
 */
 
 #include "main.hpp"
@@ -26,12 +26,12 @@ RF24 radio(RADIO_CE_PIN, RADIO_CSN_PIN, 5000000);
 /// Managers
 // Motion
 MotionControl motion_controller = MotionControl();
-// Timers
+// Interrupt Timers
 IntervalTimer motion_timer;
 IntervalTimer kicker_timer;
 IntervalTimer low_priority_timer;
 
-/// Vars
+/// Local Variables
 // Current robot status
 RobotStatusMessage status;
 // Current command to be executed
@@ -248,7 +248,6 @@ void receive_command() {
 }
 
 // Universal error handler
-// TODO: This is trash, redo
 void error_handler(RobotError e) {
   // Alert to screen
   display.clear_buffer();
@@ -350,13 +349,15 @@ void low_priority_isr() {
       Serial.println("Undervoltage Detected!");
       current_error = BatteryUndervolt;
     }
+  } else {
+    batt_uvlo_counter = 0;
   }
 
   /// Update screen
   // TODO: Maybe better idea than cycling between the two screens
   // however it is currently built out to accept more
   if (current_error != NoError) return;
-  if (iteration != 0 && iteration % 10000 == 0) {
+  if (iteration != 0 && iteration % 10 == 0) {
     display.next_window();
   }
   // Currently screen takes ~10ms to update so it gets to live in the main loop
