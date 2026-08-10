@@ -8,6 +8,7 @@ Current implementation is 4 toggle switches 1-4 where 1 is color and 2-4 are ID 
 #include <Arduino.h>
 #include "types.hpp"
 #include "pins.hpp"
+#include "config.hpp"
 
 class BotSelect {
 public:
@@ -35,7 +36,7 @@ private:
     Team read_team();
 
     /**
-     * Read the current id selected
+     * Read the current id selected, clamps team to NUM_BOTS
      * 
      * @return Robot id
      */

@@ -59,7 +59,9 @@ uint8_t radio_acks_idx = 0;
 // Temp toggle to stop just motion and kicker isrs
 bool idle = false;
 // Current error
-RobotError current_error = NoError;
+RobotError current_error = RobotError::NoError;
+// Check if init completes before killself can be called
+bool full_init = false;
 
 void setup() {
   // Initialize Motor Board //
@@ -108,7 +110,7 @@ void setup() {
   // Initialize radio //
   if(!radio.begin()) {
     Serial.println("Radio Init Failure!");
-    current_error = RadioError;
+    current_error = RobotError::RadioError;
   }
 
   // Tie interrupt to radio receive
@@ -137,6 +139,8 @@ void setup() {
   low_priority_timer.begin(low_priority_isr, LOW_PRIO_FREQ_US);
   low_priority_timer.priority(192);
   // End Initialize Interrupt Timers //
+
+  full_init = true;
 }
 
 // Main control loop
@@ -144,7 +148,7 @@ void loop() {
   us = 0;
 
   // Check errors
-  if (current_error != NoError) {
+  if (current_error != RobotError::NoError) {
     // Stop motion and kicker
     idle = true;
     error_handler(current_error);
@@ -203,9 +207,12 @@ void loop() {
     // TODO: better test if needed, edge case possible
     if (radio_timeout) {
       if (DEBUG) Serial.printf("Trashed Packet: X: %d | Y: %d | W: %d\n", control_message.body_x, control_message.body_y, control_message.body_w);
+      // Safe overwrite
+      noInterrupts();
       control_message.body_x = 0;
       control_message.body_y = 0;
       control_message.body_w = 0;
+      interrupts();
     }
     last_command = millis();
   }
@@ -257,9 +264,9 @@ void kicker_isr() {
   if (DEBUG) Serial.print("Kicker Response: ");
   if (DEBUG) Serial.println(kicker.state_string());
   if (kicker.error == BreakbeamBlockage) {
-    current_error = RecoverableKicker;
+    current_error = RobotError::RecoverableKicker;
   } else if (kicker.error != KickerError::None && millis() >= 5000) {
-    current_error = UnrecoverableKicker;
+    current_error = RobotError::UnrecoverableKicker;
   }
 }
 
@@ -278,7 +285,7 @@ void low_priority_isr() {
     batt_uvlo_counter++;
     if (batt_uvlo_counter > BATT_UVLO_THRESHOLD) {
       Serial.println("Undervoltage Detected!");
-      current_error = BatteryUndervolt;
+      current_error = RobotError::BatteryUndervolt;
       // Force shutdown at too low a battery
       if (battery_voltage < UNSAFE_BATTERY_VOLTAGE) {
         kill_self();
@@ -291,7 +298,7 @@ void low_priority_isr() {
   /// Update screen
   // TODO: Maybe better idea than cycling between the two screens
   // however it is currently built out to accept more
-  if (current_error != NoError) return;
+  if (current_error != RobotError::NoError) return;
   if (iteration != 0 && iteration % 10 == 0) {
     display.next_window();
   }
@@ -320,22 +327,22 @@ void error_handler(RobotError e) {
 
   // Error specific handling
   switch (e) {
-    case RadioError:
+    case RobotError::RadioError:
       Serial.println("RADIO ERROR");
     break;
-    case RecoverableKicker:
+    case RobotError::RecoverableKicker:
       Serial.println("RECOVERALBE KICKER ERROR ATTEMPTING RESTART");
       if (kicker.reset_error()) {
         Serial.println("Recovered kicker!");
-        current_error = NoError;
+        current_error = RobotError::NoError;
       } else {
-        current_error = UnrecoverableKicker;
+        current_error = RobotError::UnrecoverableKicker;
       }
     break;
-    case UnrecoverableKicker:
+    case RobotError::UnrecoverableKicker:
       Serial.println("UNRECOVERABLE KICKER ERROR");
     break;
-    case BatteryUndervolt:
+    case RobotError::BatteryUndervolt:
       Serial.println("BATTERY UNDERVOLTAGE ERROR!");
     break;
     default:
@@ -350,24 +357,27 @@ void error_handler(RobotError e) {
 void kill_self() {
   // Stop interrupts
   noInterrupts();
-  // Stop motors
-  Serial.println("Stopping motors!");
-  for (auto& motor : motors) {
-    motor.send_command(0);
-  }
+  // Ensure peripherals are active before trying to stop
+  if (full_init) {
+      // Stop motors
+    Serial.println("Stopping motors!");
+    for (auto& motor : motors) {
+      motor.send_command(0);
+    }
 
-  // Kick to discharge
-  KickerCommand kcommand = {
-    Kick,
-    Immediate,
-    8,
-    false
-  };
-  for (size_t i = 0; i < 4; i++) {
-    kicker.service(kcommand);
-    delay(250);
+    // Kick to discharge
+    KickerCommand kcommand = {
+      Kick,
+      Immediate,
+      8,
+      false
+    };
+    for (size_t i = 0; i < 4; i++) {
+      kicker.service(kcommand);
+      delay(250);
+    }
   }
-
+  
   // Kill Power
   Serial.println("Killing Motor Board!");
   digitalWrite(KILLN_PIN, LOW);

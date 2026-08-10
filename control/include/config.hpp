@@ -19,3 +19,5 @@
 #define KICKER_FREQ_US 1000000 / 30 // 30hz
 // Frequency of the interval timer for low priority tasks (ex: screen update, battery reading)
 #define LOW_PRIO_FREQ_US 1000000 / 2 // 2hz
+// Number of robots max
+#define NUM_BOTS 6

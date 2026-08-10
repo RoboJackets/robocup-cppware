@@ -173,7 +173,7 @@ struct ControlMessage {
      * 
      * @return String representation of control message
      */
-    String to_string();
+    const String to_string();
 };
 
 /**

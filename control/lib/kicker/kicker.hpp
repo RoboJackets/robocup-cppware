@@ -68,7 +68,7 @@ struct KickerCommand {
      * 
      * @return String representation of kicker command
      */
-    String to_string();
+    const String to_string();
 };
 
 // Kicker error enum from kicker code
@@ -150,7 +150,7 @@ public:
      * 
      * @return String representation of kicker state
      */
-    String state_string();
+    const String state_string();
 
 private:
     SPIClass &_spi;

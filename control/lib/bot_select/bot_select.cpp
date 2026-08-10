@@ -12,7 +12,8 @@ void BotSelect::begin() {
 
 void BotSelect::update() {
     team = BotSelect::read_team();
-    id = BotSelect::read_id();
+    uint8_t temp_id = BotSelect::read_id();
+    id = (temp_id >= NUM_BOTS ? NUM_BOTS - 1 : temp_id);
 }
 
 Team BotSelect::read_team() {

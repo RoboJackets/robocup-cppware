@@ -1,7 +1,9 @@
 #include "radio.hpp"
 
 void RobotStatusMessage::pack(uint8_t (&pkg)[ROBOT_STATUS_SIZE]) {
-    pkg[0] |= team;
+    // Ensure clean buffer
+    memset(pkg, 0, ROBOT_STATUS_SIZE);
+    pkg[0] |= team << 7;
     pkg[0] |= (robot_id & 0b1111) << 3;
     pkg[0] |= ball_sense_status << 2;
     pkg[0] |= kick_status << 1;
@@ -38,7 +40,7 @@ Vector3f ControlMessage::get_velocity() {
     return velocities;
 }
 
-String ControlMessage::to_string() {
+const String ControlMessage::to_string() {
     return "Team: " + String((team == Blue ? "Blue" : "Yellow")) + String(" | ID: ") + robot_id + " | Shoot Mode: " + shootmode_to_str(shoot_mode) + " | Trigger Mode: " + triggermode_to_str(trigger_mode) + " | X: " + body_x + " | Y: " + body_y + " | W: " + body_w + " | Dribbler Speed: " + dribbler_speed + " | Kick Strength " + kick_strength + " | Role: " + role + " | Mode: " + mode;
 }
 

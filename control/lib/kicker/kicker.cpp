@@ -33,7 +33,7 @@ uint16_t KickerCommand::pack() {
     return command;
 }
 
-String KickerCommand::to_string() {
+const String KickerCommand::to_string() {
     return "Type: " + shootmode_to_str(shoot_mode) + " | Trigger: " + triggermode_to_str(trigger_mode) + " | Strength: " + String(kick_strength) + " | Charge Allowed: " + String(charge_allowed);
 }
 
@@ -86,7 +86,7 @@ void Kicker::reset() {
     digitalWrite(_reset_pin, HIGH);
 }
 
-String Kicker::state_string() {
+const String Kicker::state_string() {
     return String("Voltage: ") + current_voltage + " | Ball Sensed: " + ball_sensed + " | Healthy: " + healthy + " | Error: " + kicker_error_to_str(error);
 }
 

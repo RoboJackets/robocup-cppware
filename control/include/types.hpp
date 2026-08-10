@@ -5,7 +5,7 @@ enum Team {
     Yellow = 1,
 };
 
-enum RobotError {
+enum class RobotError {
     NoError,
     RadioError,
     RecoverableKicker,
