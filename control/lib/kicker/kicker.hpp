@@ -152,17 +152,17 @@ public:
      */
     const String state_string();
 
-private:
-    SPIClass &_spi;
-    SPISettings _settings;
-    uint8_t _cs_pin;
-    uint8_t _reset_pin;
-    int8_t _miso_pin;
-
     /**
      * Updates kicker state information from raw SPI input
      * 
      * @param raw SPI reponse from kicker servicing
      */
     void update_state(uint16_t raw);
+
+private:
+    SPIClass &_spi;
+    SPISettings _settings;
+    uint8_t _cs_pin;
+    uint8_t _reset_pin;
+    int8_t _miso_pin;
 };
