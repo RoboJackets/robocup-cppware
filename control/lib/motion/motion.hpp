@@ -1,6 +1,6 @@
 /*
-Motion Control Module for controlling the commands sent to move the motors on the robot
-Currently only used for body to wheel velocity conversion as PID was iffy
+Motion Control Module for formatting the commands sent to move the motors on the robot
+Currently only used for body to wheel velocity conversion as PID was iffy control side
 */
 
 #pragma once

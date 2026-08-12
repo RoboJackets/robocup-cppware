@@ -1,6 +1,7 @@
 /*
 Robot ID and color selector
 Current implementation is 4 toggle switches 1-4 where 1 is color and 2-4 are ID number with 4 as LSB
+This being a full class is overkill but may be nice for future versions
 */
 
 #pragma once

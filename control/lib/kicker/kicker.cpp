@@ -1,8 +1,7 @@
 #include "kicker.hpp"
 
 String triggermode_to_str(TriggerMode trigger) {
-    switch (trigger)
-    {
+    switch (trigger) {
     case Immediate:
         return "Immediate";
     case Breakbeam:
@@ -13,8 +12,7 @@ String triggermode_to_str(TriggerMode trigger) {
 }
 
 String shootmode_to_str(ShootMode type) {
-    switch (type)
-    {
+    switch (type) {
     case Chip:
         return "Chip";
     default:
@@ -99,8 +97,8 @@ void Kicker::update_state(uint16_t raw) {
 
 static uint8_t reset_attempts = 0;
 bool Kicker::reset_error() {
-    if (reset_attempts >= 3) return false;
     for (int i = 0; i < 3; i++) {
+        if (reset_attempts >= 3) return false;
         Serial.printf("Kicker Reset Attempt: %d\n", reset_attempts);
         Kicker::reset();
         delay(2000);

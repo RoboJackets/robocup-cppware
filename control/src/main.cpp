@@ -20,9 +20,9 @@ SPISettings settings(2000000, MSBFIRST, SPI_MODE3);
 Kicker kicker(SPI1, settings, KICKER_CSN_PIN, KICKER_RESETN_PIN, KICKER_MISO_PIN);
 // I2C Display
 Display display = Display();
-// Radio
+// Radio SPI
 RF24 radio(RADIO_CE_PIN, RADIO_CSN_PIN, 5000000);
-// Bot select
+// Bot selecter
 BotSelect bot_select = BotSelect();
 
 /// Managers
@@ -34,34 +34,32 @@ IntervalTimer kicker_timer;
 IntervalTimer low_priority_timer;
 
 /// Local Variables
-// Current robot status
+// Current robot status info to be sent to BS
 RobotStatusMessage status;
+// Last read kicker voltage
+uint8_t kicker_voltage = 0;
 // Current command to be executed
 ControlMessage control_message;
-// # of times battery undervoltage detected
-uint8_t batt_uvlo_counter = 0;
-// Loop count just for screen swapping rn
-uint32_t iteration = 0;
-// New command from radio interrupt
+// True if new command from radio interrupt
 volatile bool new_command = false;
 // Timestamp (ms) of last command to check radio timeout
 uint32_t last_command = 0;
-// Kicker voltage
-uint8_t kicker_voltage = 0;
-// For timing profiling
-elapsedMicros us;
-// Radio timeout
+// True if no radio command in DIE_TIME_MS
 bool radio_timeout = true;
-// History of good/bad sends
+// History of good/bad sends, True = response received
 bool radio_acks[100];
-// Index of radio history array
+// Current index of radio history array
 uint8_t radio_acks_idx = 0;
-// Temp toggle to stop just motion and kicker isrs
+// # of times battery undervoltage detected
+uint8_t batt_uvlo_counter = 0;
+// Toggle to "stop" just motion and kicker isrs
 bool idle = false;
 // Current error
 RobotError current_error = RobotError::NoError;
-// Check if init completes before killself can be called
+// Check if init completes before kill_self can be called
 bool full_init = false;
+// Counter used for switching screens
+uint32_t iteration = 0;
 
 void setup() {
   // Initialize Motor Board //
@@ -145,8 +143,6 @@ void setup() {
 
 // Main control loop
 void loop() {
-  us = 0;
-
   // Check errors
   if (current_error != RobotError::NoError) {
     // Stop motion and kicker
@@ -204,7 +200,7 @@ void loop() {
       radio.startListening();
     }
     // Trash first radio movement command after timeout to prevent jolts
-    // TODO: better test if needed, edge case possible
+    // TODO: better test if needed, edge case possible, likely due to dirty radio buffer
     if (radio_timeout) {
       if (DEBUG) Serial.printf("Trashed Packet: X: %d | Y: %d | W: %d\n", control_message.body_x, control_message.body_y, control_message.body_w);
       // Safe overwrite
@@ -216,8 +212,6 @@ void loop() {
     }
     last_command = millis();
   }
-  
-  if (DEBUG) Serial.printf("Loop time: %lu us\n", (uint32_t) us);
 }
 
 // Radio interrupt
@@ -234,7 +228,7 @@ void motion_isr() {
   Vector4i wheel_velocities = motion_controller.body_to_wheels(body_velocities);
   Vector4i read_velocities = Vector4i::Zero();
   // Send commands to motor controllers
-  // TODO: Find real source of order reversal
+  // TODO: Find real source of order reversal if necessary
   read_velocities(3) = motors[0].send_and_read(wheel_velocities(3));
   read_velocities(2) = motors[1].send_and_read(wheel_velocities(2));
   read_velocities(1) = motors[2].send_and_read(wheel_velocities(1));
@@ -265,7 +259,7 @@ void kicker_isr() {
   if (DEBUG) Serial.println(kicker.state_string());
   if (kicker.error == BreakbeamBlockage) {
     current_error = RobotError::RecoverableKicker;
-  } else if (kicker.error != KickerError::None && millis() >= 5000) {
+  } else if (kicker.error != KickerError::None && millis() >= 8000) {
     current_error = RobotError::UnrecoverableKicker;
   }
 }
@@ -357,9 +351,18 @@ void error_handler(RobotError e) {
 void kill_self() {
   // Stop interrupts
   noInterrupts();
+  motion_timer.end();
+  kicker_timer.end();
+  low_priority_timer.end();
+
   // Ensure peripherals are active before trying to stop
   if (full_init) {
-      // Stop motors
+    // Update display
+    display.clear_buffer();
+    display.draw_death();
+    display.send_buffer();
+
+    // Stop motors
     Serial.println("Stopping motors!");
     for (auto& motor : motors) {
       motor.send_command(0);
@@ -373,6 +376,10 @@ void kill_self() {
       false
     };
     for (size_t i = 0; i < 4; i++) {
+      Serial.printf("Discharge kick: %d\n", i + 1);
+      // Double send to avoid missed window
+      kicker.service(kcommand);
+      delay(10);
       kicker.service(kcommand);
       delay(250);
     }

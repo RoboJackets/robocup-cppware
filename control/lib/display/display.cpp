@@ -112,6 +112,12 @@ void Display::draw_colors() {
     _u8g2.drawStr(88, 57, id_colors[_id][3]);
 }
 
+void Display::draw_death() {
+    Display::defaults();
+
+    _u8g2.drawXBMP(0, LAST_YELLOW_Y + 1, 128, 49, death_window);
+}
+
 void Display::draw_startup(uint8_t dots) {
     Display::defaults();
     _u8g2.drawStr(0, 11, "Awaiting Serial");

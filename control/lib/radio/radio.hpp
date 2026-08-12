@@ -76,15 +76,15 @@ struct RobotStatusMessage {
     Team team = Team::Blue;
     // ID of robot
     uint8_t robot_id = 0;
-    // Whether breakbeam is triggered or not
+    // True if breakbeam currently triggered
     bool ball_sense_status = false;
-    // Status of kicker
+    // True if a kick is queued
     bool kick_status = false;
-    // Health of kicker
+    // True if kicker healthy
     bool kick_healthy = false;
     // Percent battery 0-100
     uint8_t battery_percent = 0;
-    // Motor errors
+    // Motor errors (Not implemented)
     uint8_t motor_errors = 0;
     // Status of FPGA (Legacy)
     bool fpga_status = false;

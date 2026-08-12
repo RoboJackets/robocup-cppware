@@ -1,3 +1,7 @@
+/*
+Driver and data types for controlling the kicker board
+*/
+
 #pragma once
 
 #include <Arduino.h>
@@ -36,7 +40,7 @@ String triggermode_to_str(TriggerMode trigger);
 
 /**
  * The Kicker Command is the command sent to the kicker
- *
+ * 
  * The KickerCommand has the following format:
  * +---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
  * |    15   |    14   |    13   |    12   |    11   |    10   |    9    |    8    |    7    |    6    |    5    |    4    |    3    |    2    |    1    |    0    |
@@ -72,6 +76,7 @@ struct KickerCommand {
 };
 
 // Kicker error enum from kicker code
+// Actual errors are 5 bits due to kicker side formatting
 enum KickerError {
     None = 0b11111111, // Should never be used technically, only to send ok to teensy
     ChargeTimeout = 0b10011,
@@ -143,6 +148,15 @@ public:
      */
     void reset();
 
+    /**
+     * Attempts to restart the kicker to clear recoverable errors.
+     * 
+     * This will try three times to restart before returning false to signify an unrecoverable error. 
+     * 
+     * @return True if successful restart
+     * 
+     * @note Only three attempts are allowed ever regardless of how many times `reset_error()` is called for safety.
+     */
     bool reset_error();
 
     /**

@@ -1,3 +1,7 @@
+/*
+Motor driver to control the four body motors and dribbler via UART
+*/
+
 #pragma once
 
 #include <Arduino.h>
