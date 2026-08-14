@@ -97,6 +97,9 @@ void Display::draw_info() {
     _u8g2.drawStr(0, LAST_YELLOW_Y + 16, buf);
     snprintf(buf, sizeof(buf), "Kicking: %s ", (_kicking ? "RDY" : "NOT"));
     _u8g2.drawStr(0, LAST_YELLOW_Y + 24, buf);
+    uint32_t now = millis();
+    snprintf(buf, sizeof(buf), "Uptime: %ldh %ldm %lds", now / 3600000, (now % 3600000) / 60000, (now % 60000) / 1000);
+    _u8g2.drawStr(0, LAST_YELLOW_Y + 32, buf);
 }
 
 void Display::draw_colors() {
