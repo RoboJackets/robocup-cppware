@@ -160,7 +160,7 @@ void Display::draw_error(RobotError error) {
         case RobotError::UnrecoverableKicker:
         case RobotError::RecoverableKicker:
             _u8g2.drawStr((DISPLAY_WIDTH - 5 * 10) / 2, LAST_YELLOW_Y + 16, "KICKER");
-            _u8g2.drawStr((DISPLAY_WIDTH - 11 * 10) / 2, LAST_YELLOW_Y + 30, "NO RESPONSE");
+            _u8g2.drawStr((DISPLAY_WIDTH - 5 * 10) / 2, LAST_YELLOW_Y + 30, "ERROR");
         break;
         case RobotError::BatteryUndervolt:
             _u8g2.drawStr((DISPLAY_WIDTH - 7 * 10) / 2, LAST_YELLOW_Y + 16, "BATTERY");
