@@ -11,7 +11,7 @@ This brings us to the current 3rd rewrite of the Robojackets Robocup firmware.
 To start clone to repo locally:
 
 ```sh
-git clone https://github.com/Dashjax/robocup-cppware.git
+git clone https://github.com/RoboJackets/robocup-cppware
 ```
 #### Note for Windows you will need some form of Git access such as the [Git Bash](https://git-scm.com/install/windows) (easier) or [WSL](https://learn.microsoft.com/en-us/windows/wsl/install). Or just switch to Linux you will thank yourself later.
 
