@@ -52,7 +52,7 @@ bool radio_acks[100];
 uint8_t radio_acks_idx = 0;
 // # of times battery undervoltage detected
 uint8_t batt_uvlo_counter = 0;
-// Toggle to "stop" just motion and kicker isrs
+// Toggle to "stop" just motion and kicker isrs, set with set_idle()
 bool idle = false;
 // Current error
 RobotError current_error = RobotError::NoError;
@@ -146,11 +146,11 @@ void loop() {
   // Check errors
   if (current_error != RobotError::NoError) {
     // Stop motion and kicker
-    idle = true;
+    set_idle(true);
     error_handler(current_error);
   } else {
     // Movement allowed in event of error correction
-    idle = false;
+    set_idle(false);
   }
 
   // Check for radio timeout
@@ -394,4 +394,16 @@ void kill_self() {
 
   // Prevent further actions
   while(1) {delay(1);}
+}
+
+void set_idle(bool set) {
+  if (set && !idle) {
+    idle = true;
+    motion_timer.end();
+    kicker_timer.end();
+  } else if (!set && idle) {
+    idle = false;
+    motion_timer.begin(motion_isr, MOTION_FREQ_US);
+    kicker_timer.begin(kicker_isr, KICKER_FREQ_US);
+  }
 }

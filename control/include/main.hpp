@@ -22,6 +22,7 @@ using namespace Eigen;
 void power_switch_interrupt();
 void kill_self();
 void receive_command();
+void set_idle(bool);
 void error_handler(RobotError);
 
 
