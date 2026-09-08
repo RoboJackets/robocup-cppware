@@ -12,7 +12,7 @@ using namespace Eigen;
 #include "kicker.hpp"
 
 // Radio channel to be used by NRF24
-#define CHANNEL 106
+#define CHANNEL 104
 // Size of control messages from base station
 #define CONTROL_MESSAGE_SIZE 10
 // Size of robot response message

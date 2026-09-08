@@ -170,6 +170,10 @@ void loop() {
 
       ControlMessage temp_ctrl;
       temp_ctrl.unpack(data);
+      // Value correction from software?
+      temp_ctrl.body_x = int(float(temp_ctrl.body_x) * -2.1);
+      temp_ctrl.body_y = int(float(temp_ctrl.body_y) * -2.1);
+      temp_ctrl.body_w *= -1;
       // Safe write
       noInterrupts();
       // Overwrite current command with new command
@@ -230,11 +234,10 @@ void motion_isr() {
   // Dribbler speed is prescaled (supposedly), zero if past die time
   int8_t dribbler_speed = (radio_timeout ? 0 : control_message.dribbler_speed);
   // Send commands to motor controllers
-  // TODO: Find real source of order reversal from rust version if necessary
-  read_velocities(3) = motors[0].send_and_read(wheel_velocities(3));
-  read_velocities(2) = motors[1].send_and_read(wheel_velocities(2));
-  read_velocities(1) = motors[2].send_and_read(wheel_velocities(1));
-  read_velocities(0) = motors[3].send_and_read(wheel_velocities(0));
+  read_velocities(0) = motors[0].send_and_read(wheel_velocities(0));
+  read_velocities(1) = motors[1].send_and_read(wheel_velocities(1));
+  read_velocities(2) = motors[2].send_and_read(wheel_velocities(2));
+  read_velocities(3) = motors[3].send_and_read(wheel_velocities(3));
   motors[DRIBBLER].send_and_read(dribbler_speed);
   if (DEBUG) Serial.printf("Body Velocities: (%.3f, %.3f, %.3f)\n", body_velocities(0), body_velocities(1), body_velocities(2));
   if (DEBUG) Serial.printf("Wheel Velocities: (%d, %d, %d, %d)\n", wheel_velocities(0), wheel_velocities(1), wheel_velocities(2), wheel_velocities(3));
