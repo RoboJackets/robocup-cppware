@@ -1,9 +1,0 @@
-{
-  "device": "STM32G031C8T3",
-  "core": "Cortex-M0+",
-  "order": 0,
-  "toolchain": "GCC",
-  "source": {
-    "sourceType": "Empty"
-  }
-}
