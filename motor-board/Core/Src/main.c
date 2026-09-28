@@ -23,6 +23,7 @@
 #include "stm32g0xx_hal_gpio.h"
 #include "stm32g0xx_hal_tim.h"
 #include "stm32g0xx_hal_tim_ex.h"
+#include <stdint.h>
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -118,15 +119,9 @@ int main(void) {
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, 300);
-  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, 300);
-  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, 300);
-  // HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
-  // HAL_TIMEx_PWMN_Start(&htim1, TIM_CHANNEL_1);
-  // HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2);
-  // HAL_TIMEx_PWMN_Start(&htim1, TIM_CHANNEL_2);
-  // HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_3);
-  // HAL_TIMEx_PWMN_Start(&htim1, TIM_CHANNEL_3);
+  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, 150);
+  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, 150);
+  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, 150);
 
   HAL_TIMEx_HallSensor_Start(&htim2);
 
@@ -152,27 +147,50 @@ int main(void) {
       {0, 0, 0}  // disabled
   };
 
-  uint32_t indicator_phase = 1;
+  uint32_t speed_low = 150;
+  uint32_t speed_high = 300;
+  uint32_t speed_now = speed_low;
+  uint32_t rising = 1;
 
   uint32_t tick = 0;
 
   while (1) {
 
-    int32_t phase_idx = 6;
-    if (tick % 100 < 70) {
-      // /* USER CODE END WHILE */
-      uint32_t hall1 = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_0);
-      uint32_t hall2 = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_1);
-      uint32_t hall3 = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_2);
+    if (tick >= 500) {
+      __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, speed_now);
+      __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, speed_now);
+      __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, speed_now);
 
-      // look for the phase index
-      for (int32_t i = 0; i < 6; i++) {
-        int8_t (*entry)[3] = &hallTable[i];
-        if ((*entry)[0] == hall1 && (*entry)[1] == hall2 &&
-            (*entry)[2] == hall3) {
-          phase_idx = i;
-          break;
-        }
+      if (rising) {
+        speed_now++;
+      } else {
+        speed_now--;
+      }
+
+      if (speed_now <= speed_low) {
+        rising = 1;
+      }
+      if (speed_now >= speed_high) {
+        rising = 0;
+      }
+
+      tick = 0;
+    }
+    tick++;
+
+    int32_t phase_idx = 0;
+    // /* USER CODE END WHILE */
+    uint32_t hall1 = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_0);
+    uint32_t hall2 = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_1);
+    uint32_t hall3 = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_2);
+
+    // look for the phase index
+    for (int32_t i = 0; i < 6; i++) {
+      int8_t (*entry)[3] = &hallTable[i];
+      if ((*entry)[0] == hall1 && (*entry)[1] == hall2 &&
+          (*entry)[2] == hall3) {
+        phase_idx = i;
+        break;
       }
     }
 
@@ -196,14 +214,11 @@ int main(void) {
       }
     }
 
-    if (phase_idx == indicator_phase) {
+    if (rising) {
       HAL_GPIO_WritePin(GPIOC, GPIO_PIN_14, 0);
     } else {
       HAL_GPIO_WritePin(GPIOC, GPIO_PIN_14, 1);
     }
-
-
-    tick++;
 
     /* USER CODE BEGIN 3 */
   }
