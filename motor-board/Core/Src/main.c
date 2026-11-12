@@ -148,7 +148,7 @@ int main(void) {
   };
 
   uint32_t speed_low = 150;
-  uint32_t speed_high = 300;
+  uint32_t speed_high = 275;
   uint32_t speed_now = speed_low;
   uint32_t rising = 1;
 
