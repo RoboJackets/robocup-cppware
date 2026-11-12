@@ -1,4 +1,5 @@
 #include "app.h"
+#include "board_constants.h"
 #include "i2c.h"
 #include "i2c_generic.h"
 #include "lm75.h"
@@ -7,6 +8,10 @@
 #include "stm32g0xx_hal.h"
 #include "stm32g0xx_hal_gpio.h"
 #include <stdio.h>
+
+/**
+ * THIS IS A PLACEHOLDER FILE WHILE DRIVERS ARE WRITTEN AND TESTED!
+ */
 
 int i2c1_write(void *ctx, uint8_t addr, const uint8_t *data, size_t len_) {
   I2C_HandleTypeDef *i2c = (I2C_HandleTypeDef *)ctx;
@@ -39,6 +44,18 @@ void app_start() {
       .bus = &i2c1_bus,
       .addr = 0x48,
   };
+
+  enum boardtype board_type = get_board_type();
+  if (board_type == BOARD_TYPE_UNKNOWN) {
+    snprintf(printBuffer, sizeof(printBuffer), "Unknown board type\n");
+    send_log(printBuffer);
+  } else if (board_type == BOARD_TYPE_DRIVE_V1) {
+    snprintf(printBuffer, sizeof(printBuffer), "Drive board v1 identified!\n");
+    send_log(printBuffer);
+  } else if (board_type == BOARD_TYPE_DRIBBLER_v1) {
+    snprintf(printBuffer, sizeof(printBuffer), "Dribbler board identified!\n");
+    send_log(printBuffer);
+  }
 
   while (1) {
     float temp = lm75_read_temperature(&lm75);

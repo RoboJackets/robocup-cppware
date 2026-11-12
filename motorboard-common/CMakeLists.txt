@@ -48,6 +48,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user sources here
     App/Src/app.c
     App/Src/logger.c
+    App/Src/board_constants.c
 )
 
 # Add include paths
