@@ -68,19 +68,20 @@ void lm75_set_config(const lm75_t *sensor, const lm75_config_t *config) {
   config_reg |= (uint8_t)config->mode;
 
   uint8_t transmission[2];
-  transmission[0] = CONFIG;
+  transmission[0] = LM75_REG_CONFIG;
   transmission[1] = config_reg;
   sensor->bus->write(sensor->bus->ctx, sensor->addr, transmission, 2);
 }
 
 lm75_config_t lm75_get_config(const lm75_t *sensor) {
-  lm75_config_t config = {QUEUE1, LOW, COMPARATOR, NORMAL}; /* power-on default */
+  lm75_config_t config = {LM75_OS_QUEUE1, LM75_OS_POL_LOW, LM75_OS_COMPARATOR,
+                          LM75_MODE_NORMAL}; /* power-on default */
   if (sensor == NULL) {
     return config;
   }
 
   uint8_t config_reg;
-  if (lm75_read_reg(sensor, CONFIG, &config_reg, 1) != 0) {
+  if (lm75_read_reg(sensor, LM75_REG_CONFIG, &config_reg, 1) != 0) {
     return config;
   }
 
@@ -92,21 +93,21 @@ lm75_config_t lm75_get_config(const lm75_t *sensor) {
 }
 
 float lm75_read_temperature(const lm75_t *sensor) {
-  return lm75_read_temp_reg(sensor, TEMP);
+  return lm75_read_temp_reg(sensor, LM75_REG_TEMP);
 }
 
 void lm75_set_overtemp(const lm75_t *sensor, float temperature) {
-  lm75_write_temp_reg(sensor, OT, temperature);
+  lm75_write_temp_reg(sensor, LM75_REG_OT, temperature);
 }
 
 float lm75_get_overtemp(const lm75_t *sensor) {
-  return lm75_read_temp_reg(sensor, OT);
+  return lm75_read_temp_reg(sensor, LM75_REG_OT);
 }
 
 void lm75_set_hysteresis(const lm75_t *sensor, float temperature) {
-  lm75_write_temp_reg(sensor, HYST, temperature);
+  lm75_write_temp_reg(sensor, LM75_REG_HYST, temperature);
 }
 
 float lm75_get_hysteresis(const lm75_t *sensor) {
-  return lm75_read_temp_reg(sensor, HYST);
+  return lm75_read_temp_reg(sensor, LM75_REG_HYST);
 }

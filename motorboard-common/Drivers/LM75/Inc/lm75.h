@@ -8,10 +8,15 @@ typedef struct {
   uint8_t addr; // 7-bit addr
 } lm75_t;
 
-enum lm75_config_os_queue { QUEUE1 = 0, QUEUE2 = 1, QUEUE4 = 2, QUEUE6 = 3 };
-enum lm75_config_os_polarity { LOW = 0, HIGH = 1 };
-enum lm75_config_os_mode { COMPARATOR = 0, INTERRUPT = 1 };
-enum lm75_config_mode { NORMAL = 0, SHUTDOWN = 1 };
+enum lm75_config_os_queue {
+  LM75_OS_QUEUE1 = 0,
+  LM75_OS_QUEUE2 = 1,
+  LM75_OS_QUEUE4 = 2,
+  LM75_OS_QUEUE6 = 3
+};
+enum lm75_config_os_polarity { LM75_OS_POL_LOW = 0, LM75_OS_POL_HIGH = 1 };
+enum lm75_config_os_mode { LM75_OS_COMPARATOR = 0, LM75_OS_INTERRUPT = 1 };
+enum lm75_config_mode { LM75_MODE_NORMAL = 0, LM75_MODE_SHUTDOWN = 1 };
 
 typedef struct {
   enum lm75_config_os_queue os_queue;
@@ -20,7 +25,12 @@ typedef struct {
   enum lm75_config_mode mode;
 } lm75_config_t;
 
-enum lm75_register { CONFIG = 0x01, TEMP = 0x00, OT = 0x02, HYST = 0x03 };
+enum lm75_register {
+  LM75_REG_CONFIG = 0x01,
+  LM75_REG_TEMP = 0x00,
+  LM75_REG_OT = 0x02,
+  LM75_REG_HYST = 0x03
+};
 
 /**
  * @brief Configure an LM75 sensor.
