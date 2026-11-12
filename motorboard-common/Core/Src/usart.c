@@ -32,7 +32,8 @@ void MX_LPUART1_UART_Init(void)
 {
 
   /* USER CODE BEGIN LPUART1_Init 0 */
-
+  //FIXME: This driver flips RX/TX due to a mistake on drive-motorboard v1.0
+  //Flip it back to normal before programming other boards.
   /* USER CODE END LPUART1_Init 0 */
 
   /* USER CODE BEGIN LPUART1_Init 1 */
