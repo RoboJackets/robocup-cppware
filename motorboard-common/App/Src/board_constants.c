@@ -4,7 +4,7 @@
 #include <stdbool.h>
 
 /* CONSTANTS FOR DRIVE MOTORBOARD V1 */
-const analog_constants_t DRIVE_MOTORBOARD_V1_ANALOG_CONSTANTS = {
+static const analog_constants_t DRIVE_MOTORBOARD_V1_ANALOG_CONSTANTS = {
     .sense_gain = 0.1095f,
     .sense_offset = 1.65f,
     .sense_range_low = -15.07f,
@@ -13,7 +13,7 @@ const analog_constants_t DRIVE_MOTORBOARD_V1_ANALOG_CONSTANTS = {
 
 /* CONSTANTS FOR DRIBBLER MOTORBOARD V1 */
 // TODO: Fill this out when this board goes to production
-const analog_constants_t DRIBBLER_MOTORBOARD_V1_ANALOG_CONSTANTS = {
+static const analog_constants_t DRIBBLER_MOTORBOARD_V1_ANALOG_CONSTANTS = {
     .sense_gain = 0.0f,
     .sense_offset = 0.0f,
     .sense_range_low = 0.0f,
