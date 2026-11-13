@@ -4,6 +4,7 @@
 #include "i2c_generic.h"
 #include "logger.h"
 #include "main.h"
+#include "motor.h"
 #include "stm32g0xx_hal.h"
 #include "stm32g0xx_hal_gpio.h"
 #include "temp.h"
@@ -12,6 +13,16 @@
 /**
  * THIS IS A PLACEHOLDER FILE WHILE DRIVERS ARE WRITTEN AND TESTED!
  */
+
+enum motor_phase_state_t phase_table[7][3] = {
+    {MOTOR_PHASE_HIGH, MOTOR_PHASE_LOW, MOTOR_PHASE_FLOAT}, // 0
+    {MOTOR_PHASE_FLOAT, MOTOR_PHASE_LOW, MOTOR_PHASE_HIGH}, // 60
+    {MOTOR_PHASE_FLOAT, MOTOR_PHASE_HIGH, MOTOR_PHASE_LOW}, // 120
+    {MOTOR_PHASE_HIGH, MOTOR_PHASE_FLOAT, MOTOR_PHASE_LOW}, // 180
+    {MOTOR_PHASE_LOW, MOTOR_PHASE_FLOAT, MOTOR_PHASE_HIGH}, // 240
+    {MOTOR_PHASE_LOW, MOTOR_PHASE_HIGH, MOTOR_PHASE_FLOAT}, // 300
+    {MOTOR_PHASE_HIGH, MOTOR_PHASE_HIGH, MOTOR_PHASE_HIGH}  // disabled
+};
 
 void app_start() {
   // initialize I2C peripheral
@@ -26,14 +37,16 @@ void app_start() {
   }
   flush_logs();
 
+  motor_set_duty_cycle(0.5);
+
   while (1) {
-    temp_readings_t temps = get_temperature_readings();
-    log_info("Ambient: %d C", (int)temps.ambient);
-    log_info("Die: %d C", (int)temps.die);
+
+    motor_hall_state_t halls = get_motor_hall_state();
+    int8_t index = halls_to_index(halls);
+
+    enum motor_phase_state_t *motor_phases = phase_table[index];
+    motor_set_phase_state(motor_phases[0], motor_phases[1], motor_phases[2]);
 
     HAL_GPIO_TogglePin(FAULT_LED_GPIO_Port, FAULT_LED_Pin);
-    HAL_Delay(500);
-    flush_logs();
-    flush_logs();
   }
 }

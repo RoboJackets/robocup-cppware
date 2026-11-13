@@ -50,6 +50,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     App/Src/logger.c
     App/Src/temp.c
     App/Src/board_constants.c
+    App/Src/motor.c
 )
 
 # Add include paths
