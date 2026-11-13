@@ -38,7 +38,7 @@ static const i2c_bus_t i2c1_bus = {
 
 static lm75_t lm75 = {
     .bus = &i2c1_bus,
-    .addr = 0x48, // address pins all tied to GND
+    .addr = I2C_ADDR_LM75, 
 };
 
 /* Internal Die Temperature */
