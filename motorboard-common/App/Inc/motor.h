@@ -26,4 +26,6 @@ void motor_set_phase_state(enum motor_phase_state_t stateU,
                            enum motor_phase_state_t stateV,
                            enum motor_phase_state_t stateW);
 
+float motor_read_current(void);
+
 #endif /* __MOTOR_H */

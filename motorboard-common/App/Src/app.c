@@ -37,15 +37,10 @@ void app_start() {
   }
   flush_logs();
 
-  motor_set_duty_cycle(0.5);
-
   while (1) {
-
-    motor_hall_state_t halls = get_motor_hall_state();
-    int8_t index = halls_to_index(halls);
-
-    enum motor_phase_state_t *motor_phases = phase_table[index];
-    motor_set_phase_state(motor_phases[0], motor_phases[1], motor_phases[2]);
+    int miliamps = motor_read_current() * 1000;
+    log_info("mA: %d", miliamps);
+    flush_logs();
 
     HAL_GPIO_TogglePin(FAULT_LED_GPIO_Port, FAULT_LED_Pin);
   }
