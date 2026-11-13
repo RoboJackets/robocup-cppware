@@ -93,5 +93,5 @@ float motor_read_current() {
   float voltage = ((float)raw) * (3.3 / 4096.0);
   float absolute_voltage = voltage - analog_constants.sense_offset;
 
-  return absolute_voltage * analog_constants.sense_gain;
+  return raw; // absolute_voltage *analog_constants.sense_gain;
 }
