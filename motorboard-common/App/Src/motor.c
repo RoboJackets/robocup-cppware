@@ -76,17 +76,12 @@ void motor_set_phase_state(enum motor_phase_state_t stateU,
   set_single_motor_phase(stateW, TIM_CHANNEL_3);
 }
 
-float motor_read_current() {
+float motor_adc_to_current(uint32_t adc) {
 
-  HAL_ADC_Start(&hadc1);
-  HAL_ADC_PollForConversion(&hadc1, 10);
-  uint32_t raw = HAL_ADC_GetValue(&hadc1);
-  HAL_ADC_Stop(&hadc1);
+  const analog_constants_t analog_constants = get_analog_constants();
 
-  // const analog_constants_t analog_constants = get_analog_constants();
+  float voltage = ((float)adc) * (3.3 / 4096.0);
+  float absolute_voltage = voltage - analog_constants.sense_offset;
 
-  // float voltage = ((float)raw) * (3.3 / 4096.0);
-  // float absolute_voltage = voltage - analog_constants.sense_offset;
-
-  return raw; // absolute_voltage *analog_constants.sense_gain;
+  return absolute_voltage * analog_constants.sense_gain;
 }

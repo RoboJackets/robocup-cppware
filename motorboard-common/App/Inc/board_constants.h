@@ -17,7 +17,7 @@ enum boardtype {
 enum boardtype get_board_type(void);
 
 typedef struct {
-  float sense_gain;       // Current Gain (V/A), Volts/Amps
+  float sense_gain;       // Current Gain (A/V), Amps/Volts
   float sense_offset;     // Voltage offset, Volts
   float sense_range_low;  // Lower current sense limit, Amps
   float sense_range_high; // Upper current sense limit, Amps

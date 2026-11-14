@@ -44,6 +44,10 @@ extern "C" {
 
 // address pins all tied to GND
 #define I2C_ADDR_LM75 0x48
+
+// The AS5047P claims 4000 ticks, but the timer HW effectively scales by 2
+#define ENC_TICKS_PER_REV 2000U
+
 /* USER CODE END EC */
 
 /* Exported macro ------------------------------------------------------------*/

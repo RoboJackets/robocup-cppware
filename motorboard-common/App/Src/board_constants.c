@@ -5,7 +5,7 @@
 
 /* CONSTANTS FOR DRIVE MOTORBOARD V1 */
 static const analog_constants_t DRIVE_MOTORBOARD_V1_ANALOG_CONSTANTS = {
-    .sense_gain = 0.1095f,
+    .sense_gain = 9.1324f, // 109.5 mV/A
     .sense_offset = 1.65f,
     .sense_range_low = -15.07f,
     .sense_range_high = 15.07f,
