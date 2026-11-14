@@ -1,6 +1,7 @@
 #ifndef __MOTOR_H
 #define __MOTOR_H
 
+#include "fixed.h"
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -26,7 +27,7 @@ void motor_set_phase_state(enum motor_phase_state_t stateU,
                            enum motor_phase_state_t stateV,
                            enum motor_phase_state_t stateW);
 
-float motor_adc_to_current(uint32_t adc);
+fix32_t motor_adc_to_current(uint32_t adc);
 
 typedef enum motor_direction_t { MOTOR_FWD, MOTOR_REV } motor_direction_t;
 

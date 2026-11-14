@@ -2,6 +2,7 @@
 #include "adc.h"
 #include "board_constants.h"
 #include "encoder.h"
+#include "fixed.h"
 #include "i2c.h"
 #include "i2c_generic.h"
 #include "logger.h"
@@ -63,7 +64,7 @@ typedef struct {
 static volatile adc_out_t adc_out = {0, 0};
 
 static volatile int32_t velocity = 0;
-static volatile float current = 0;
+static volatile fix32_t current_fixed = 0;
 
 static volatile int32_t velocity_setpoint = 0;
 static volatile motor_direction_t motor_direction = MOTOR_FWD;
@@ -86,6 +87,12 @@ void app_start() {
   log_flush();
   HAL_GPIO_WritePin(FAULT_LED_GPIO_Port, FAULT_LED_Pin, true);
 
+  // start the ADC DMA
+  HAL_ADC_Start_DMA(&hadc1, (uint32_t *)&adc_out, 2);
+
+  // start TIM1 CH4
+  HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_4);
+
   // TIM14 is used for the motion control loop
   HAL_TIM_Base_Start_IT(&htim14);
 
@@ -98,17 +105,16 @@ void app_start() {
     log_flush();
     sample_idx = 0;
     memset(sample_datastore, 0, sizeof(sample_datastore));
-
-    velocity_setpoint = 100000;
-    motor_set_duty_cycle(1.0);
+    motor_coast = false;
+    motor_set_duty_cycle(0.9);
     HALL_ISR();
     HAL_TIM_Base_Start_IT(&htim16);
 
     HAL_Delay(1000);
 
     HAL_TIM_Base_Stop_IT(&htim16);
-    velocity_setpoint = 0;
     motor_set_duty_cycle(0.0);
+    motor_coast = true;
     HALL_ISR();
 
     log_info("TEST END");
@@ -136,20 +142,10 @@ void TIM16_ISR() {
   }
 }
 
-// PID parameters
-static volatile int32_t last_error = 0;
+static volatile float temp_res = 0.0;
 
-static const float FF_OFFSET = 0.205;
-static const float FF_SLOPE = 4.3e-6;
-static const float VEL_DEADBAND = 20000.0;
-
-static const float param_p = 0.00004;
-static const float param_i = 0.0;
-static const float param_d = 0.0;
-
-// 8kHz velocity control loop
+// 4kHz velocity control loop
 void TIM14_ISR() {
-
   velocity_update();
   velocity = velocity_get();
 
@@ -169,69 +165,36 @@ void TIM14_ISR() {
 
   // advance the ptr
   motor_adc_idx = (motor_adc_idx + 1) % 16;
-
-  static float integral = 0.0f;
-  static float last_velocity = 0.0f;
-
-  velocity_setpoint = clamp(velocity_setpoint, -200000.0f, 200000.0f);
-
-  if (fabsf(velocity_setpoint) < VEL_DEADBAND) {
-    motor_set_duty_cycle(0.0f);
-    motor_coast = true;
-    integral = 0.0f; // reset state
-    last_velocity = velocity;
-    HALL_ISR();
-  } else {
-    motor_coast = false;
-    current = motor_adc_to_current(motor_adc_sum / 16);
-
-    float error = velocity_setpoint - velocity;
-    float d_meas = velocity - last_velocity; // derivative on measurement
-    last_velocity = velocity;
-
-    float ff = (fabsf(velocity_setpoint) > VEL_DEADBAND)
-                   ? copysignf(FF_OFFSET + FF_SLOPE * fabsf(velocity_setpoint),
-                               velocity_setpoint)
-                   : 0.0f;
-    // FF_OFFSET = 0.205f, FF_SLOPE = 4.3e-6f
-    float u = ff + param_p * error + integral - param_d * d_meas;
-    float u_sat = clamp(u, -1.0f, 1.0f);
-
-    // anti-windup: only integrate if unsaturated, or if error pulls output back
-    if (u == u_sat || (u > 1.0f && error < 0) || (u < -1.0f && error > 0)) {
-      integral = clamp(integral + param_i * error, -1.0f, 1.0f);
-    }
-
-    // // crude current limit: cut duty if over limit
-    // if (current > CURRENT_LIMIT)
-    //   u_sat *= CURRENT_LIMIT / current;
-
-    motor_set_duty_cycle(fabsf(u_sat));
-    motor_direction = (u_sat >= 0) ? MOTOR_FWD : MOTOR_REV;
-    HALL_ISR();
-  }
 }
 
 // Called on hall edge update
 void HALL_ISR() {
-  // if (motor_coast) {
-  //   motor_set_phase_state(MOTOR_PHASE_FLOAT, MOTOR_PHASE_FLOAT,
-  //                         MOTOR_PHASE_FLOAT);
-  //   return;
-  // }
+
   static int8_t last_index = -1;
   motor_hall_state_t halls = get_motor_hall_state();
   int8_t index = halls_to_index(halls);
 
   if (index != last_index) {
     last_index = index;
+  }
+
+  if (motor_coast) {
+    motor_set_phase_state(MOTOR_PHASE_FLOAT, MOTOR_PHASE_FLOAT,
+                          MOTOR_PHASE_FLOAT);
+    motor_set_duty_cycle(0.0);
+  } else {
     enum motor_phase_state_t *motor_phases = (motor_direction == MOTOR_FWD)
                                                  ? phase_table_fwd[index]
                                                  : phase_table_rev[index];
-    // current peaks right before a phase switch
-    if (index % 2 == 0) {
-      HAL_ADC_Start_DMA(&hadc1, (uint32_t *)&adc_out, 2);
-    }
     motor_set_phase_state(motor_phases[0], motor_phases[1], motor_phases[2]);
+  }
+}
+
+// Called every time an ADC conversion is complete
+void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc) {
+  if (hadc->Instance == ADC1) {
+    if (motor_coast == false) {
+      current_fixed = motor_adc_to_current(adc_out.current);
+    }
   }
 }

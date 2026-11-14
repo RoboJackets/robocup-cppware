@@ -1,6 +1,7 @@
 #include "motor.h"
 #include "adc.h"
 #include "board_constants.h"
+#include "fixed.h"
 #include "main.h"
 #include "stm32g0xx_hal.h"
 #include "stm32g0xx_hal_gpio.h"
@@ -76,12 +77,18 @@ void motor_set_phase_state(enum motor_phase_state_t stateU,
   set_single_motor_phase(stateW, TIM_CHANNEL_3);
 }
 
-float motor_adc_to_current(uint32_t adc) {
+const fix32_t MOTOR_ADC_TO_CURRENT_SCALE = FIX_FROM_FLOAT(3.3 / 4096.0);
 
-  const analog_constants_t analog_constants = get_analog_constants();
+fix32_t motor_adc_to_current(uint32_t adc) {
+  static fix32_t multiplier = FIX_ONE;
+  static bool precompute = false;
 
-  float voltage = ((float)adc) * (3.3 / 4096.0);
-  float absolute_voltage = voltage - analog_constants.sense_offset;
+  if (!precompute) {
+    const analog_constants_t analog_constants = get_analog_constants();
+    multiplier =
+        fix_mul(MOTOR_ADC_TO_CURRENT_SCALE, analog_constants.sense_gain);
+    precompute = true;
+  }
 
-  return absolute_voltage * analog_constants.sense_gain;
+  return fix_mul(FIX_FROM_INT(adc - 2048), multiplier);
 }

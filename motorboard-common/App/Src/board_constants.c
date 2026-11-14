@@ -5,20 +5,20 @@
 
 /* CONSTANTS FOR DRIVE MOTORBOARD V1 */
 static const analog_constants_t DRIVE_MOTORBOARD_V1_ANALOG_CONSTANTS = {
-    .sense_gain = 9.1324f, // 109.5 mV/A
-    .sense_offset = 1.65f,
-    .sense_range_low = -15.07f,
-    .sense_range_high = 15.07f,
-    .oc_threshold = 10.05f};
+    .sense_gain = FIX_FROM_FLOAT(9.1324f), // 109.5 mV/A
+    .sense_offset = FIX_FROM_FLOAT(1.65f),
+    .sense_range_low = FIX_FROM_FLOAT(-15.07f),
+    .sense_range_high = FIX_FROM_FLOAT(15.07f),
+    .oc_threshold = FIX_FROM_FLOAT(10.05f)};
 
 /* CONSTANTS FOR DRIBBLER MOTORBOARD V1 */
 // TODO: Fill this out when this board goes to production
 static const analog_constants_t DRIBBLER_MOTORBOARD_V1_ANALOG_CONSTANTS = {
-    .sense_gain = 0.0f,
-    .sense_offset = 0.0f,
-    .sense_range_low = 0.0f,
-    .sense_range_high = 0.0f,
-    .oc_threshold = 0.0f};
+    .sense_gain = FIX_FROM_FLOAT(0.0f),
+    .sense_offset = FIX_FROM_FLOAT(0.0f),
+    .sense_range_low = FIX_FROM_FLOAT(0.0f),
+    .sense_range_high = FIX_FROM_FLOAT(0.0f),
+    .oc_threshold = FIX_FROM_FLOAT(0.0f)};
 
 enum boardtype fetch_board_type(void) {
   uint8_t chipid_a = HAL_GPIO_ReadPin(CHIPID_A_GPIO_Port, CHIPID_A_Pin);
@@ -55,13 +55,13 @@ enum boardtype get_board_type(void) {
   return board_type;
 }
 
-const analog_constants_t get_analog_constants(void) {
+analog_constants_t get_analog_constants(void) {
   switch (get_board_type()) {
   case BOARD_TYPE_DRIVE_V1:
     return DRIVE_MOTORBOARD_V1_ANALOG_CONSTANTS;
   case BOARD_TYPE_DRIBBLER_v1:
     return DRIBBLER_MOTORBOARD_V1_ANALOG_CONSTANTS;
   default:
-    return (analog_constants_t){0};
-  }
+    return DRIVE_MOTORBOARD_V1_ANALOG_CONSTANTS;
+  };
 }
