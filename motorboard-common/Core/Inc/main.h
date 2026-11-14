@@ -69,6 +69,8 @@ void Error_Handler(void);
 #define ENC_A_GPIO_Port GPIOA
 #define ENC_B_Pin GPIO_PIN_1
 #define ENC_B_GPIO_Port GPIOA
+#define SCOPE_OUT_Pin GPIO_PIN_4
+#define SCOPE_OUT_GPIO_Port GPIOA
 #define I_SENSE_Pin GPIO_PIN_1
 #define I_SENSE_GPIO_Port GPIOB
 #define OC_COMP_INT_Pin GPIO_PIN_12

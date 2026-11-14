@@ -77,21 +77,16 @@ void motor_set_phase_state(enum motor_phase_state_t stateU,
 }
 
 float motor_read_current() {
-  ADC_ChannelConfTypeDef cfg = {0};
-  cfg.Channel = ADC_CHANNEL_9;
-  cfg.Rank = ADC_REGULAR_RANK_1;
-  cfg.SamplingTime = ADC_SAMPLINGTIME_COMMON_2;
-  HAL_ADC_ConfigChannel(&hadc1, &cfg);
 
   HAL_ADC_Start(&hadc1);
   HAL_ADC_PollForConversion(&hadc1, 10);
   uint32_t raw = HAL_ADC_GetValue(&hadc1);
   HAL_ADC_Stop(&hadc1);
 
-  const analog_constants_t analog_constants = get_analog_constants();
+  // const analog_constants_t analog_constants = get_analog_constants();
 
-  float voltage = ((float)raw) * (3.3 / 4096.0);
-  float absolute_voltage = voltage - analog_constants.sense_offset;
+  // float voltage = ((float)raw) * (3.3 / 4096.0);
+  // float absolute_voltage = voltage - analog_constants.sense_offset;
 
   return raw; // absolute_voltage *analog_constants.sense_gain;
 }
