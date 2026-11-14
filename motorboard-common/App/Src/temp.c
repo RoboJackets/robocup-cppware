@@ -38,48 +38,33 @@ static const i2c_bus_t i2c1_bus = {
 
 static lm75_t lm75 = {
     .bus = &i2c1_bus,
-    .addr = I2C_ADDR_LM75, 
+    .addr = I2C_ADDR_LM75,
 };
 
-/* Internal Die Temperature */
+static temp_readings_t last_temps = {0.0, 0.0, 0.0};
+
+temp_readings_t temp_get_readings(void) { return last_temps; }
+
+float temp_get_ambient() {
+  float ambient = lm75_read_temperature(&lm75);
+  last_temps.ambient = ambient;
+  return ambient;
+}
+
+float temp_get_motor(void) {
+  if (get_board_type() == BOARD_TYPE_DRIBBLER_v1) {
+    // TODO: Placeholder untl chip is decided
+    return 0.0;
+  } else {
+    return 0.0;
+  }
+}
 
 // VDDA is 3.3V
 static uint32_t VDDA_MV = 3300U;
-
-static float read_die_temp(void) {
-  ADC_ChannelConfTypeDef cfg = {0};
-  cfg.Channel = ADC_CHANNEL_TEMPSENSOR;
-  cfg.Rank = ADC_REGULAR_RANK_1;
-  cfg.SamplingTime = ADC_SAMPLINGTIME_COMMON_1;
-  HAL_ADC_ConfigChannel(&hadc1, &cfg);
-
-  HAL_ADC_Start(&hadc1);
-  HAL_ADC_PollForConversion(&hadc1, 10);
-  uint32_t raw = HAL_ADC_GetValue(&hadc1);
-  HAL_ADC_Stop(&hadc1);
-
-  int32_t temp_c = __HAL_ADC_CALC_TEMPERATURE(VDDA_MV, raw, ADC_RESOLUTION_12B);
+float temp_get_die(uint32_t raw_adc) {
+  int32_t temp_c =
+      __HAL_ADC_CALC_TEMPERATURE(VDDA_MV, raw_adc, ADC_RESOLUTION_12B);
+  last_temps.die = temp_c;
   return (float)temp_c;
-}
-
-temp_readings_t get_temperature_readings(void) {
-  temp_readings_t results = {};
-
-  // Read from the ambient temperature sensor
-  results.ambient = lm75_read_temperature(&lm75);
-
-  // Read from the internal ADC
-  results.die = read_die_temp();
-
-  // If we're a dribbler board, we also have an external thermistor
-  // over an I2C ADC
-  if (get_board_type() == BOARD_TYPE_DRIBBLER_v1) {
-
-    // TODO: Placeholder untl chip is decided
-    results.motor = 0.0;
-  } else {
-    results.motor = 0.0;
-  }
-
-  return results;
 }

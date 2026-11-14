@@ -7,14 +7,17 @@
 #include "logger.h"
 #include "main.h"
 #include "motor.h"
+#include "spi.h"
 #include "stm32g0xx_hal.h"
 #include "stm32g0xx_hal_adc.h"
 #include "stm32g0xx_hal_gpio.h"
+#include "stm32g0xx_hal_spi.h"
 #include "stm32g0xx_hal_uart.h"
 #include "temp.h"
 #include "tim.h"
 #include "usart.h"
 #include <stdio.h>
+#include <string.h>
 
 /**
  * THIS IS A PLACEHOLDER FILE WHILE DRIVERS ARE WRITTEN AND TESTED!
@@ -44,7 +47,16 @@ static void await_uart() {
   HAL_UART_Receive(&hlpuart1, &tmp, 1, 100000);
 }
 
-volatile uint32_t current_adc;
+// ADC
+typedef struct {
+  uint32_t current;
+  uint32_t dietemp;
+} adc_out_t;
+
+static volatile adc_out_t adc_out = {0, 0};
+
+static volatile uint32_t velocity = 0;
+static volatile float current = 0;
 
 void app_start() {
   // initialize I2C peripheral
@@ -66,48 +78,53 @@ void app_start() {
   // TIM2 is the encoder
   HAL_TIM_Base_Start_IT(&htim2);
 
-  // Configure current sense ADC
-  ADC_ChannelConfTypeDef cfg = {0};
-  cfg.Channel = ADC_CHANNEL_9;
-  cfg.Rank = ADC_REGULAR_RANK_1;
-  cfg.SamplingTime = ADC_SAMPLINGTIME_COMMON_1;
-  HAL_ADC_ConfigChannel(&hadc1, &cfg);
+  uint8_t spi_buf[32];
+  static const uint8_t reply[5] = {1, 2, 3, 4, 5};
 
   while (1) {
-    // Wait before beginning test cycle
-    log_info("Awaiting key press...");
-    flush_logs();
-    await_uart();
-    log_info("TEST START");
-    flush_logs();
+    memset(spi_buf, 0, sizeof(spi_buf));
 
-    int32_t start = HAL_GetTick();
+    HAL_SPI_Abort(&hspi1);        // stop any HAL transfer in progress
+    __HAL_RCC_SPI1_FORCE_RESET(); // clears both FIFOs and all state
+    __HAL_RCC_SPI1_RELEASE_RESET();
+    HAL_SPI_Init(&hspi1);
 
-    motor_set_duty_cycle(0.3);
-    HALL_ISR(); // Call this once to kickstart the process
-    while (1) {
-      int32_t miliAmps = motor_adc_to_current(current_adc) * 1000;
-
-      log_info("T: %d, mA:%d", velocity_get(), miliAmps);
-      flush_logs();
-
-      if (HAL_GetTick() - start > 2000) {
-        break;
-      }
+    int ret =
+        HAL_SPI_TransmitReceive(&hspi1, (uint8_t *)reply, spi_buf, 5, 1000);
+    if (ret == HAL_OK) {
+      HAL_GPIO_TogglePin(FAULT_LED_GPIO_Port, FAULT_LED_Pin);
+      log_info("tick!");
     }
-    motor_set_duty_cycle(0.8);
 
-    HAL_GPIO_WritePin(FAULT_LED_GPIO_Port, FAULT_LED_Pin, true);
-
-    motor_set_duty_cycle(0);
-
-    log_info("TEST END");
     flush_logs();
   }
 }
 
 // 10kHz motion control loop
-void TIM14_ISR() { velocity_update(); }
+void TIM14_ISR() {
+  velocity_update();
+  velocity = velocity_get();
+
+  static uint32_t motor_adc_window[16] = {0};
+  static int16_t motor_adc_idx = 0;
+  static uint32_t motor_adc_sum = 0;
+
+  // read the last current sense value
+  uint32_t motor_adc = adc_out.current;
+
+  // remove the existing entry
+  motor_adc_sum -= motor_adc_window[motor_adc_idx];
+
+  // add the new entry
+  motor_adc_sum += motor_adc;
+  motor_adc_window[motor_adc_idx] = motor_adc;
+
+  // advance the ptr
+  motor_adc_idx = (motor_adc_idx + 1) % 16;
+
+  // update the current estimate
+  current = motor_adc_to_current(motor_adc_sum / 16);
+}
 
 // Called on hall edge update
 void HALL_ISR() {
@@ -118,10 +135,10 @@ void HALL_ISR() {
   if (index != last_index) {
     last_index = index;
     enum motor_phase_state_t *motor_phases = phase_table_fwd[index];
-    motor_set_phase_state(motor_phases[0], motor_phases[1], motor_phases[2]);
-    HAL_GPIO_WritePin(SCOPE_OUT_GPIO_Port, SCOPE_OUT_Pin, index % 2);
-    if (index % 2 == 1) {
-      HAL_ADC_Start_DMA(&hadc1, &current_adc, 1);
+    // current peaks right before a phase switch
+    if (index % 2 == 0) {
+      HAL_ADC_Start_DMA(&hadc1, (uint32_t *)&adc_out, 2);
     }
+    motor_set_phase_state(motor_phases[0], motor_phases[1], motor_phases[2]);
   }
 }
