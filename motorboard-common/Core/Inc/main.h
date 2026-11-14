@@ -79,10 +79,13 @@ void Error_Handler(void);
 #define OC_SEL_GPIO_Port GPIOA
 #define HALL_A_Pin GPIO_PIN_5
 #define HALL_A_GPIO_Port GPIOB
+#define HALL_A_EXTI_IRQn EXTI4_15_IRQn
 #define HALL_B_Pin GPIO_PIN_8
 #define HALL_B_GPIO_Port GPIOB
+#define HALL_B_EXTI_IRQn EXTI4_15_IRQn
 #define HALL_C_Pin GPIO_PIN_9
 #define HALL_C_GPIO_Port GPIOB
+#define HALL_C_EXTI_IRQn EXTI4_15_IRQn
 
 /* USER CODE BEGIN Private defines */
 

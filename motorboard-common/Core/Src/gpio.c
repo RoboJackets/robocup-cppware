@@ -75,11 +75,21 @@ void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : OC_COMP_INT_Pin HALL_A_Pin HALL_B_Pin HALL_C_Pin */
-  GPIO_InitStruct.Pin = OC_COMP_INT_Pin|HALL_A_Pin|HALL_B_Pin|HALL_C_Pin;
+  /*Configure GPIO pin : OC_COMP_INT_Pin */
+  GPIO_InitStruct.Pin = OC_COMP_INT_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(OC_COMP_INT_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : HALL_A_Pin HALL_B_Pin HALL_C_Pin */
+  GPIO_InitStruct.Pin = HALL_A_Pin|HALL_B_Pin|HALL_C_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  /* EXTI interrupt init*/
+  HAL_NVIC_SetPriority(EXTI4_15_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI4_15_IRQn);
 
 }
 
