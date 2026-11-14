@@ -37,7 +37,7 @@ static char *read_block() {
   return ret_block;
 }
 
-void flush_logs() {
+void log_flush() {
   char *msg = read_block();
   if (msg == NULL) {
     return;
@@ -64,7 +64,7 @@ static void log_common(const char *fmt, va_list args) {
 // Only logs in debug mode
 void log_info(const char *fmt, ...) {
 #ifndef NDEBUG
-  //assert(__get_IPSR() != 0); // ensure we are not in an interrupt context
+  // assert(__get_IPSR() != 0); // ensure we are not in an interrupt context
 
   va_list args;
   va_start(args, fmt);
@@ -75,7 +75,7 @@ void log_info(const char *fmt, ...) {
 
 // Always logs
 void log_error(const char *fmt, ...) {
-  //assert(__get_IPSR() != 0); // ensure we are not in an interrupt context
+  // assert(__get_IPSR() != 0); // ensure we are not in an interrupt context
 
   va_list args;
   va_start(args, fmt);

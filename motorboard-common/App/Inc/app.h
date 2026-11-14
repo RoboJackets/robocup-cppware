@@ -5,8 +5,7 @@
 void app_start();
 
 void TIM14_ISR(void);
-
-
+void TIM16_ISR(void);
 void HALL_ISR(void);
 
 #endif /* __APP_H */

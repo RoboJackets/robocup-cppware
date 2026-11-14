@@ -28,4 +28,6 @@ void motor_set_phase_state(enum motor_phase_state_t stateU,
 
 float motor_adc_to_current(uint32_t adc);
 
+typedef enum motor_direction_t { MOTOR_FWD, MOTOR_REV } motor_direction_t;
+
 #endif /* __MOTOR_H */

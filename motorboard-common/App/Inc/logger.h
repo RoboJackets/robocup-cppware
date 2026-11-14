@@ -10,6 +10,6 @@
 void log_info(const char *fmt, ...);
 void log_error(const char *fmt, ...);
 
-void flush_logs();
+void log_flush();
 
 #endif /* __LOGGER_H */
