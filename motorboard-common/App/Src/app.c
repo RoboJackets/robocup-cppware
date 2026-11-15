@@ -136,7 +136,7 @@ void app_start() {
     log_flush();
 
     for (int i = 0; i < 1024; i++) {
-      log_info("%d,%d", i, sample_datastore[i]);
+      log_info("%d,%d", i, sample_datastore[i] * 8);
       log_flush();
     }
 
@@ -148,7 +148,7 @@ void app_start() {
 // 2Khz sampling loop
 void TIM16_ISR() {
   if (sample_idx < 1024) {
-    sample_datastore[sample_idx] = velocity / 100;
+    sample_datastore[sample_idx] = velocity / 8;
     sample_idx++;
   }
 }

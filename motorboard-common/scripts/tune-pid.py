@@ -76,7 +76,7 @@ def main():
     p.add_argument("--window", type=int, default=9,
                    help="smoothing window (samples); 1 = off")
     p.add_argument("--dt", type=float, default=1, help="ms per index")
-    p.add_argument("--scale", type=float, default=20.0,
+    p.add_argument("--scale", type=float, default=1.0,
                    help="raw value per rotation/s")
     args = p.parse_args()
 
