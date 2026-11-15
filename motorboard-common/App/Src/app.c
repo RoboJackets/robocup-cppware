@@ -75,8 +75,23 @@ static volatile fix32_t duty = 0;
 static volatile motor_direction_t motor_direction = MOTOR_FWD;
 static volatile bool motor_coast = true;
 
-static int16_t sample_datastore[1024];
-static int16_t sample_idx = 0;
+static const uint32_t SPI_COMMAND_MAGIC = 0x7ABBCC7A;
+typedef struct __attribute__((packed)) {
+  int32_t velocity;
+  int32_t velocity_setpoint;
+  int16_t current_mA;
+  int16_t current_setpoint_mA;
+  int16_t duty_m;
+  int8_t motor_direction;
+  int8_t motor_coast;
+} spi_status_t;
+
+typedef struct __attribute__((packed)) {
+  int32_t velocity;
+  uint32_t _b1;
+  uint32_t _b2;
+  uint32_t magic;
+} spi_command_t;
 
 void app_start() {
   // initialize I2C peripheral
@@ -107,59 +122,54 @@ void app_start() {
   // calibrate the ADC offset
   motor_adc_calibrate(adc_out.current);
 
+  int32_t watchdog = 0;
+
+  spi_command_t spi_command;
+  spi_status_t spi_response;
   while (1) {
-    await_uart();
-    log_info("TEST START");
-    log_flush();
-    sample_idx = 0;
-    memset(sample_datastore, 0, sizeof(sample_datastore));
-    HAL_TIM_Base_Start_IT(&htim16);
-    HAL_GPIO_WritePin(FAULT_LED_GPIO_Port, FAULT_LED_Pin, false);
+    // prepare response (sent during the NEXT transaction)
+    spi_response.velocity = velocity;
+    spi_response.velocity_setpoint = velocity_setpoint;
+    spi_response.current_mA =
+        fix_to_int(fix_mul(current, FIX_FROM_FLOAT(1000)));
+    spi_response.current_setpoint_mA =
+        fix_to_int(fix_mul(current_setpoint, FIX_FROM_FLOAT(1000)));
+    spi_response.duty_m = fix_to_int(fix_mul(duty, FIX_FROM_FLOAT(1000)));
+    spi_response.motor_direction = motor_direction;
+    spi_response.motor_coast = motor_coast;
 
-    /* TEST START */
+    // full duplex: blocks until master clocks out 16 bytes
+    HAL_StatusTypeDef st = HAL_SPI_TransmitReceive(
+        &hspi1, (uint8_t *)&spi_response, (uint8_t *)&spi_command,
+        sizeof(spi_command), 10);
 
-    velocity_setpoint = 150000;
-    motor_coast = false;
+    if (st != HAL_OK || spi_command.magic != SPI_COMMAND_MAGIC) {
+      // bad/misaligned frame: resync the peripheral and drop it
+      HAL_SPI_Abort(&hspi1);
+      __HAL_RCC_SPI1_FORCE_RESET();
+      __HAL_RCC_SPI1_RELEASE_RESET();
+      HAL_SPI_Init(&hspi1);
+      watchdog++;
 
-    HAL_Delay(300);
-
-    velocity_setpoint = -150000;
-
-    HAL_Delay(500);
-
-    motor_coast = true;
-    velocity_setpoint = 0;
-
-    /* TEST END */
-
-    HAL_GPIO_WritePin(FAULT_LED_GPIO_Port, FAULT_LED_Pin, true);
-    HAL_TIM_Base_Stop_IT(&htim16);
-
-    log_info("TEST END");
-    log_flush();
-
-    HAL_Delay(1000);
-
-    log_info("DATA START");
-    log_flush();
-
-    for (int i = 0; i < sample_idx; i++) {
-      log_info("%d,%d", i, sample_datastore[i] * 8);
-      log_flush();
+      if (watchdog > 50) {
+        velocity_setpoint = 0;
+        motor_coast = true;
+        log_info("SPI watchdog triggered, resetting motor");
+        log_flush();
+      } else {
+        continue;
+      }
+    } else {
+      watchdog = 0;
+      // valid command
+      velocity_setpoint = spi_command.velocity;
+      motor_coast = false;
     }
-
-    log_info("DATA END");
-    log_flush();
   }
 }
 
 // 1Khz sampling loop
-void TIM16_ISR() {
-  if (sample_idx < 1024) {
-    sample_datastore[sample_idx] = velocity / 8;
-    sample_idx++;
-  }
-}
+void TIM16_ISR() {}
 
 static volatile float temp_res = 0.0;
 
@@ -168,8 +178,8 @@ void velocity_loop() {
   static fix32_t velocity_acc = FIX_FROM_FLOAT(0.0);
   static const fix32_t velocity_kp = FIX_FROM_FLOAT(100);
   static const fix32_t velocity_ki = FIX_FROM_FLOAT(0.001);
-  static const fix32_t I_MAX = FIX_FROM_FLOAT(4.0);
-  static const fix32_t I_MIN = FIX_FROM_FLOAT(-4.0);
+  static const fix32_t I_MAX = FIX_FROM_FLOAT(2.0);
+  static const fix32_t I_MIN = FIX_FROM_FLOAT(-2.0);
 
   velocity_update();
   velocity = velocity_get();
