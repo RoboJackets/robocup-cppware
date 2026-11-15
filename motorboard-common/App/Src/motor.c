@@ -1,7 +1,7 @@
 #include "motor.h"
 #include "adc.h"
 #include "board_constants.h"
-#include "fixed.h"
+#include "fix32.h"
 #include "main.h"
 #include "stm32g0xx_hal.h"
 #include "stm32g0xx_hal_gpio.h"
@@ -10,15 +10,13 @@
 
 motor_hall_state_t get_motor_hall_state(void) {
   motor_hall_state_t state = {};
-
-  state.chA = HAL_GPIO_ReadPin(HALL_A_GPIO_Port, HALL_A_Pin);
-  state.chB = HAL_GPIO_ReadPin(HALL_B_GPIO_Port, HALL_B_Pin);
-  state.chC = HAL_GPIO_ReadPin(HALL_C_GPIO_Port, HALL_C_Pin);
-
+  state.chA = HALL_A_GPIO_Port->IDR & HALL_A_Pin;
+  state.chB = HALL_B_GPIO_Port->IDR & HALL_B_Pin;
+  state.chC = HALL_C_GPIO_Port->IDR & HALL_C_Pin;
   return state;
 }
 
-static int16_t hall_to_angle[8] = {
+static const int16_t hall_to_angle[8] = {
     -1, // cba (not possible)
     2,  // cbA 120° [2]
     4,  // cBa 240° [4]
@@ -29,22 +27,8 @@ static int16_t hall_to_angle[8] = {
     -1  // CBA (not possible)
 };
 
-int8_t halls_to_index(motor_hall_state_t state) {
-
-  // The below packs hall channels A,B,C into the lower 3 bits
-  // 0b00000CBA
-  uint8_t index = 0;
-  if (state.chA == true) {
-    index |= 0x1;
-  }
-  if (state.chB == true) {
-    index |= 0x2;
-  }
-  if (state.chC == true) {
-    index |= 0x4;
-  }
-
-  return hall_to_angle[index];
+int8_t halls_to_index(motor_hall_state_t s) {
+  return hall_to_angle[(s.chA) | (s.chB << 1) | (s.chC << 2)];
 }
 
 void motor_set_duty_cycle(float duty) {
@@ -55,31 +39,30 @@ void motor_set_duty_cycle(float duty) {
   __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, duty_thresh);
 }
 
-static void set_single_motor_phase(enum motor_phase_state_t state,
-                                   uint32_t ch) {
-  if (state == MOTOR_PHASE_HIGH) { // high side on
-    HAL_TIM_PWM_Start(&htim1, ch);
-    HAL_TIMEx_PWMN_Stop(&htim1, ch);
-  } else if (state == MOTOR_PHASE_LOW) { // low side on
-    HAL_TIM_PWM_Stop(&htim1, ch);
-    HAL_TIMEx_PWMN_Start(&htim1, ch);
-  } else { // floating
-    HAL_TIM_PWM_Stop(&htim1, ch);
-    HAL_TIMEx_PWMN_Stop(&htim1, ch);
-  }
+void motor_set_duty_cycle_fix(fix32_t duty) {
+  uint32_t duty_thresh = fix_to_int(fix_mul(duty, FIX_FROM_INT(640)));
+
+  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, duty_thresh);
+  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, duty_thresh);
+  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, duty_thresh);
 }
 
-void motor_set_phase_state(enum motor_phase_state_t stateU,
-                           enum motor_phase_state_t stateV,
-                           enum motor_phase_state_t stateW) {
-  set_single_motor_phase(stateU, TIM_CHANNEL_1);
-  set_single_motor_phase(stateV, TIM_CHANNEL_2);
-  set_single_motor_phase(stateW, TIM_CHANNEL_3);
+#define PHASE_MASK                                                             \
+  (TIM_CCER_CC1E | TIM_CCER_CC1NE | TIM_CCER_CC2E | TIM_CCER_CC2NE |           \
+   TIM_CCER_CC3E | TIM_CCER_CC3NE)
+
+void motor_set_phase_state(enum motor_phase_state_t u,
+                           enum motor_phase_state_t v,
+                           enum motor_phase_state_t w) {
+  TIM1->CCER = (TIM1->CCER & ~PHASE_MASK) | u | (v << 4) | (w << 8);
 }
 
 const fix32_t MOTOR_ADC_TO_CURRENT_SCALE = FIX_FROM_FLOAT(3.3 / 4096.0);
+static int32_t MOTOR_ADC_OFFSET = 2048;
 
-fix32_t motor_adc_to_current(uint32_t adc) {
+void motor_adc_calibrate(int32_t offset) { MOTOR_ADC_OFFSET = offset; }
+
+fix32_t motor_adc_to_current(int32_t adc) {
   static fix32_t multiplier = FIX_ONE;
   static bool precompute = false;
 
@@ -90,5 +73,5 @@ fix32_t motor_adc_to_current(uint32_t adc) {
     precompute = true;
   }
 
-  return fix_mul(FIX_FROM_INT(adc - 2048), multiplier);
+  return fix_mul(FIX_FROM_INT(adc - MOTOR_ADC_OFFSET), multiplier);
 }

@@ -2,7 +2,7 @@
 #include "adc.h"
 #include "board_constants.h"
 #include "encoder.h"
-#include "fixed.h"
+#include "fix32.h"
 #include "i2c.h"
 #include "i2c_generic.h"
 #include "logger.h"
@@ -64,11 +64,12 @@ typedef struct {
 static volatile adc_out_t adc_out = {0, 0};
 
 static volatile int32_t velocity = 0;
-static volatile fix32_t current_fixed = 0;
-
 static volatile int32_t velocity_setpoint = 0;
+static volatile fix32_t current = 0;
+static volatile fix32_t current_setpoint = 0;
+
 static volatile motor_direction_t motor_direction = MOTOR_FWD;
-static volatile bool motor_coast = false;
+static volatile bool motor_coast = true;
 
 static int16_t sample_datastore[1024];
 static int16_t sample_idx = 0;
@@ -99,23 +100,32 @@ void app_start() {
   // TIM2 is the encoder
   HAL_TIM_Base_Start_IT(&htim2);
 
+  // calibrate the ADC offset
+  motor_adc_calibrate(adc_out.current);
+
   while (1) {
     await_uart();
     log_info("TEST START");
     log_flush();
     sample_idx = 0;
     memset(sample_datastore, 0, sizeof(sample_datastore));
-    motor_coast = false;
-    motor_set_duty_cycle(0.9);
-    HALL_ISR();
     HAL_TIM_Base_Start_IT(&htim16);
+    HAL_GPIO_WritePin(FAULT_LED_GPIO_Port, FAULT_LED_Pin, false);
 
-    HAL_Delay(1000);
+    /* TEST START */
 
-    HAL_TIM_Base_Stop_IT(&htim16);
-    motor_set_duty_cycle(0.0);
+    current_setpoint = FIX_FROM_FLOAT(2.0);
+    motor_coast = false;
+
+    HAL_Delay(10000);
+
     motor_coast = true;
-    HALL_ISR();
+    current_setpoint = FIX_FROM_FLOAT(0.0);
+
+    /* TEST END */
+
+    HAL_GPIO_WritePin(FAULT_LED_GPIO_Port, FAULT_LED_Pin, true);
+    HAL_TIM_Base_Stop_IT(&htim16);
 
     log_info("TEST END");
     log_flush();
@@ -135,7 +145,6 @@ void app_start() {
 
 // 2Khz sampling loop
 void TIM16_ISR() {
-  HAL_GPIO_TogglePin(FAULT_LED_GPIO_Port, FAULT_LED_Pin);
   if (sample_idx < 1024) {
     sample_datastore[sample_idx] = velocity / 100;
     sample_idx++;
@@ -146,6 +155,8 @@ static volatile float temp_res = 0.0;
 
 // 4kHz velocity control loop
 void TIM14_ISR() {
+
+  HAL_GPIO_WritePin(SCOPE_A_GPIO_Port, SCOPE_A_Pin, true);
   velocity_update();
   velocity = velocity_get();
 
@@ -165,23 +176,19 @@ void TIM14_ISR() {
 
   // advance the ptr
   motor_adc_idx = (motor_adc_idx + 1) % 16;
+
+  HAL_GPIO_WritePin(SCOPE_A_GPIO_Port, SCOPE_A_Pin, false);
 }
 
 // Called on hall edge update
 void HALL_ISR() {
 
-  static int8_t last_index = -1;
   motor_hall_state_t halls = get_motor_hall_state();
   int8_t index = halls_to_index(halls);
-
-  if (index != last_index) {
-    last_index = index;
-  }
 
   if (motor_coast) {
     motor_set_phase_state(MOTOR_PHASE_FLOAT, MOTOR_PHASE_FLOAT,
                           MOTOR_PHASE_FLOAT);
-    motor_set_duty_cycle(0.0);
   } else {
     enum motor_phase_state_t *motor_phases = (motor_direction == MOTOR_FWD)
                                                  ? phase_table_fwd[index]
@@ -190,11 +197,55 @@ void HALL_ISR() {
   }
 }
 
+// 25kHz current loop
+void current_loop(fix32_t current_k) {
+
+  static fix32_t current_acc = FIX_FROM_FLOAT(0.0);
+  static const fix32_t current_kp = FIX_FROM_FLOAT(0.04125);
+  static const fix32_t current_ki = FIX_FROM_FLOAT(0.002);
+  static const fix32_t D_MAX = FIX_FROM_FLOAT(0.95);
+  static const fix32_t D_MIN = FIX_FROM_FLOAT(0.0);
+
+  if (motor_coast == true) {
+    current_acc = FIX_FROM_FLOAT(0.0);
+    motor_set_duty_cycle_fix(FIX_FROM_FLOAT(0.0));
+    return;
+  }
+
+  fix32_t error = fix_sub(current_setpoint, current_k);
+  fix32_t next_acc = fix_add(current_acc, error);
+
+  fix32_t duty_raw =
+      fix_add(fix_mul(current_kp, error), fix_mul(current_ki, current_acc));
+
+  fix32_t duty = fix_clamp(duty_raw, D_MIN, D_MAX);
+
+  // anti-windup for the integrator
+  if (duty_raw == duty || (duty_raw >= D_MAX && error < 0) ||
+      (duty_raw <= D_MIN && error > 0)) {
+    current_acc = next_acc;
+  }
+
+  motor_set_duty_cycle_fix(duty);
+
+  // trigger the commutation itr
+  __HAL_GPIO_EXTI_GENERATE_SWIT(HALL_A_Pin);
+}
+
 // Called every time an ADC conversion is complete
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc) {
+  static bool even_tick = false;
+  static uint32_t current_sum = 0;
+
   if (hadc->Instance == ADC1) {
-    if (motor_coast == false) {
-      current_fixed = motor_adc_to_current(adc_out.current);
+    current_sum += adc_out.current;
+    if (even_tick) {
+      // only convert every other tick, averaging out
+
+      current = motor_adc_to_current(current_sum / 2);
+      current_sum = 0;
+      current_loop(current);
     }
+    even_tick = !even_tick;
   }
 }

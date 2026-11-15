@@ -20,7 +20,7 @@ void velocity_update() {
 
   // compensate for the delay between the last ISR call and now
   uint32_t current_time = __HAL_TIM_GET_COUNTER(&htim14);
-  float delay = 16000 - last_time + current_time;
+  uint32_t delay = 16000 - last_time + current_time;
   last_time = current_time;
 
   // ticks are at 64 MHz

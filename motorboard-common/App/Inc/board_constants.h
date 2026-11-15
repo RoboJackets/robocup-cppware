@@ -1,7 +1,7 @@
 #ifndef __BOARD_CONSTANTS_H
 #define __BOARD_CONSTANTS_H
 
-#include "fixed.h"
+#include "fix32.h"
 
 /**
  * The Drive MotorBoard and Dribbler MotorBoard share the same codebase.
