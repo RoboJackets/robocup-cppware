@@ -63,10 +63,14 @@ typedef struct {
 
 static volatile adc_out_t adc_out = {0, 0};
 
+// velocity loop
 static volatile int32_t velocity = 0;
 static volatile int32_t velocity_setpoint = 0;
+
+// current loop
 static volatile fix32_t current = 0;
 static volatile fix32_t current_setpoint = 0;
+static volatile fix32_t duty = 0;
 
 static volatile motor_direction_t motor_direction = MOTOR_FWD;
 static volatile bool motor_coast = true;
@@ -114,13 +118,17 @@ void app_start() {
 
     /* TEST START */
 
-    current_setpoint = FIX_FROM_FLOAT(2.0);
+    velocity_setpoint = 150000;
     motor_coast = false;
 
-    HAL_Delay(1000);
+    HAL_Delay(300);
+
+    velocity_setpoint = -150000;
+
+    HAL_Delay(500);
 
     motor_coast = true;
-    current_setpoint = FIX_FROM_FLOAT(0.0);
+    velocity_setpoint = 0;
 
     /* TEST END */
 
@@ -135,7 +143,7 @@ void app_start() {
     log_info("DATA START");
     log_flush();
 
-    for (int i = 0; i < 1024; i++) {
+    for (int i = 0; i < sample_idx; i++) {
       log_info("%d,%d", i, sample_datastore[i] * 8);
       log_flush();
     }
@@ -145,7 +153,7 @@ void app_start() {
   }
 }
 
-// 2Khz sampling loop
+// 1Khz sampling loop
 void TIM16_ISR() {
   if (sample_idx < 1024) {
     sample_datastore[sample_idx] = velocity / 8;
@@ -156,47 +164,28 @@ void TIM16_ISR() {
 static volatile float temp_res = 0.0;
 
 // 4kHz velocity control loop
-void TIM14_ISR() {
+void velocity_loop() {
+  static fix32_t velocity_acc = FIX_FROM_FLOAT(0.0);
+  static const fix32_t velocity_kp = FIX_FROM_FLOAT(100);
+  static const fix32_t velocity_ki = FIX_FROM_FLOAT(0.001);
+  static const fix32_t I_MAX = FIX_FROM_FLOAT(4.0);
+  static const fix32_t I_MIN = FIX_FROM_FLOAT(-4.0);
 
-  HAL_GPIO_WritePin(SCOPE_A_GPIO_Port, SCOPE_A_Pin, true);
   velocity_update();
   velocity = velocity_get();
 
-  static uint32_t motor_adc_window[16] = {0};
-  static int16_t motor_adc_idx = 0;
-  static uint32_t motor_adc_sum = 0;
-
-  // read the last current sense value
-  uint32_t motor_adc = adc_out.current;
-
-  // remove the existing entry
-  motor_adc_sum -= motor_adc_window[motor_adc_idx];
-
-  // add the new entry
-  motor_adc_sum += motor_adc;
-  motor_adc_window[motor_adc_idx] = motor_adc;
-
-  // advance the ptr
-  motor_adc_idx = (motor_adc_idx + 1) % 16;
-
-  HAL_GPIO_WritePin(SCOPE_A_GPIO_Port, SCOPE_A_Pin, false);
-}
-
-// Called on hall edge update
-void HALL_ISR() {
-
-  motor_hall_state_t halls = get_motor_hall_state();
-  int8_t index = halls_to_index(halls);
-
-  if (motor_coast) {
-    motor_set_phase_state(MOTOR_PHASE_FLOAT, MOTOR_PHASE_FLOAT,
-                          MOTOR_PHASE_FLOAT);
-  } else {
-    enum motor_phase_state_t *motor_phases = (motor_direction == MOTOR_FWD)
-                                                 ? phase_table_fwd[index]
-                                                 : phase_table_rev[index];
-    motor_set_phase_state(motor_phases[0], motor_phases[1], motor_phases[2]);
+  if (motor_coast == true) {
+    velocity_acc = FIX_FROM_FLOAT(0.0);
+    current_setpoint = FIX_FROM_FLOAT(0.0);
+    return;
   }
+
+  fix32_t error = fix_sub(velocity_setpoint, velocity);
+  velocity_acc = fix_add(velocity_acc, error);
+
+  current_setpoint =
+      fix_add(fix_mul(velocity_kp, error), fix_mul(velocity_ki, velocity_acc));
+  current_setpoint = fix_clamp(current_setpoint, I_MIN, I_MAX);
 }
 
 // 25kHz current loop
@@ -206,7 +195,7 @@ void current_loop(fix32_t current_k) {
   static const fix32_t current_kp = FIX_FROM_FLOAT(0.04125);
   static const fix32_t current_ki = FIX_FROM_FLOAT(0.002);
   static const fix32_t D_MAX = FIX_FROM_FLOAT(0.95);
-  static const fix32_t D_MIN = FIX_FROM_FLOAT(0.0);
+  static const fix32_t D_MIN = FIX_FROM_FLOAT(-0.95);
 
   if (motor_coast == true) {
     current_acc = FIX_FROM_FLOAT(0.0);
@@ -220,7 +209,13 @@ void current_loop(fix32_t current_k) {
   fix32_t duty_raw =
       fix_add(fix_mul(current_kp, error), fix_mul(current_ki, current_acc));
 
-  fix32_t duty = fix_clamp(duty_raw, D_MIN, D_MAX);
+  if (duty < 0) {
+    motor_direction = MOTOR_REV;
+  } else {
+    motor_direction = MOTOR_FWD;
+  }
+
+  duty = fix_clamp(duty_raw, D_MIN, D_MAX);
 
   // anti-windup for the integrator
   if (duty_raw == duty || (duty_raw >= D_MAX && error < 0) ||
@@ -228,10 +223,43 @@ void current_loop(fix32_t current_k) {
     current_acc = next_acc;
   }
 
-  motor_set_duty_cycle_fix(duty);
+  motor_set_duty_cycle_fix(fix_abs(duty));
 
   // trigger the commutation itr
   __HAL_GPIO_EXTI_GENERATE_SWIT(HALL_A_Pin);
+}
+
+// 4kHz velocity control loop
+void TIM14_ISR() { velocity_loop(); }
+
+// Called on hall edge update
+void HALL_ISR() {
+
+  motor_hall_state_t halls = get_motor_hall_state();
+  int8_t index = halls_to_index(halls);
+
+  // are we being commanded to brake?
+
+  // current velocity is in the opposite direction of the commanded direction
+  bool motor_braking = false;
+  if (velocity < -20000 && motor_direction == MOTOR_FWD) {
+    motor_braking = true;
+  }
+  if (velocity > 20000 && motor_direction == MOTOR_REV) {
+    motor_braking = true;
+  }
+
+  if (motor_coast) {
+    motor_set_phase_state(MOTOR_PHASE_FLOAT, MOTOR_PHASE_FLOAT,
+                          MOTOR_PHASE_FLOAT);
+  } else if (motor_braking) {
+    motor_set_phase_state(MOTOR_PHASE_LOW, MOTOR_PHASE_LOW, MOTOR_PHASE_LOW);
+  } else {
+    enum motor_phase_state_t *motor_phases = (motor_direction == MOTOR_FWD)
+                                                 ? phase_table_fwd[index]
+                                                 : phase_table_rev[index];
+    motor_set_phase_state(motor_phases[0], motor_phases[1], motor_phases[2]);
+  }
 }
 
 // Called every time an ADC conversion is complete

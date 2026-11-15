@@ -77,17 +77,19 @@ def main():
                    help="smoothing window (samples); 1 = off")
     p.add_argument("--dt", type=float, default=1, help="ms per index")
     p.add_argument("--scale", type=float, default=1.0,
-                   help="raw value per rotation/s")
+                   help="raw value per tick/s")
+    p.add_argument("--setpoint", type=float, default=100000,
+                   help="target setpoint for the velocity loop")
     args = p.parse_args()
 
     # Open the window before the first run and update after each one
     plt.ion()
     fig, ax = plt.subplots()
     ax.set_xlabel("Time (ms)")
-    ax.set_ylabel("Rotations per second")
+    ax.set_ylabel("Ticks per second")
 
     # setpoint line
-    ax.axhline(50, color="red", linestyle="--", linewidth=1)
+    ax.axhline(args.setpoint, color="red", linestyle="--", linewidth=1)
 
     ax.set_title(f"Device data ({args.window}-pt moving avg)")
     ax.grid(True)
