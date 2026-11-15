@@ -117,7 +117,7 @@ void app_start() {
     current_setpoint = FIX_FROM_FLOAT(2.0);
     motor_coast = false;
 
-    HAL_Delay(10000);
+    HAL_Delay(1000);
 
     motor_coast = true;
     current_setpoint = FIX_FROM_FLOAT(0.0);
@@ -129,6 +129,8 @@ void app_start() {
 
     log_info("TEST END");
     log_flush();
+
+    HAL_Delay(1000);
 
     log_info("DATA START");
     log_flush();

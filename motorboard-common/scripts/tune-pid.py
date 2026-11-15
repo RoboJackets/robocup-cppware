@@ -106,7 +106,6 @@ def main():
             ax.legend(ncol=2, fontsize="small")
             fig.canvas.draw_idle()
             plt.pause(0.05)
-            time.sleep(1)
 
     ax.set_title(
         f"Device data ({args.runs} runs, {args.window}-pt moving avg)")
