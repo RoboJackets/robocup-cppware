@@ -53,6 +53,22 @@ def reader():
         last_n = vals[0]
         win_count += 1
         with lock:
+            if (vals[1] < -200000 or vals[1] > 200000):
+                # throw out the value
+                continue
+
+            if (vals[5] < -1000 or vals[5] > 1000):
+                # throw out the value
+                continue
+
+            if (vals[6] < -1 or vals[6] > 1):
+                # throw out the value
+                continue
+
+            if (vals[7] < -1 or vals[7] > 1):
+                # throw out the value
+                continue
+
             for k, v in zip(FIELDS, vals):
                 data[k].append(v)
             dt = now - win_start

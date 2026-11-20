@@ -138,6 +138,12 @@ void app_start() {
     spi_response.motor_direction = motor_direction;
     spi_response.motor_coast = motor_coast;
 
+    // corrections for graphs
+    if (motor_direction == MOTOR_REV) {
+      spi_response.current_mA *= -1;
+      spi_response.duty_m *= -1;
+    }
+
     // full duplex: blocks until master clocks out 16 bytes
     HAL_StatusTypeDef st = HAL_SPI_TransmitReceive(
         &hspi1, (uint8_t *)&spi_response, (uint8_t *)&spi_command,
@@ -151,7 +157,7 @@ void app_start() {
       HAL_SPI_Init(&hspi1);
       watchdog++;
 
-      if (watchdog > 50) {
+      if (watchdog > 100) {
         velocity_setpoint = 0;
         motor_coast = true;
         log_info("SPI watchdog triggered, resetting motor");
@@ -176,8 +182,8 @@ static volatile float temp_res = 0.0;
 // 4kHz velocity control loop
 void velocity_loop() {
   static fix32_t velocity_acc = FIX_FROM_FLOAT(0.0);
-  static const fix32_t velocity_kp = FIX_FROM_FLOAT(100);
-  static const fix32_t velocity_ki = FIX_FROM_FLOAT(0.001);
+  static const fix32_t velocity_kp = FIX_FROM_FLOAT(1.65);
+  static const fix32_t velocity_ki = FIX_FROM_FLOAT(0.0);
   static const fix32_t I_MAX = FIX_FROM_FLOAT(2.0);
   static const fix32_t I_MIN = FIX_FROM_FLOAT(-2.0);
 
@@ -190,7 +196,7 @@ void velocity_loop() {
     return;
   }
 
-  fix32_t error = fix_sub(velocity_setpoint, velocity);
+  fix32_t error = fix_sub(velocity_setpoint / 8, velocity / 8);
   velocity_acc = fix_add(velocity_acc, error);
 
   current_setpoint =
@@ -202,35 +208,36 @@ void velocity_loop() {
 void current_loop(fix32_t current_k) {
 
   static fix32_t current_acc = FIX_FROM_FLOAT(0.0);
-  static const fix32_t current_kp = FIX_FROM_FLOAT(0.04125);
-  static const fix32_t current_ki = FIX_FROM_FLOAT(0.002);
+  static const fix32_t current_kp = FIX_FROM_FLOAT(0.004);
+  static const fix32_t current_ki = FIX_FROM_FLOAT(0.0000);
   static const fix32_t D_MAX = FIX_FROM_FLOAT(0.95);
   static const fix32_t D_MIN = FIX_FROM_FLOAT(-0.95);
+  static const fix32_t C_ACC_MAX = FIX_FROM_FLOAT(500.0);
+  static const fix32_t C_ACC_MIN = FIX_FROM_FLOAT(-500.0);
 
   if (motor_coast == true) {
     current_acc = FIX_FROM_FLOAT(0.0);
     motor_set_duty_cycle_fix(FIX_FROM_FLOAT(0.0));
     return;
   }
-
-  fix32_t error = fix_sub(current_setpoint, current_k);
-  fix32_t next_acc = fix_add(current_acc, error);
-
-  fix32_t duty_raw =
-      fix_add(fix_mul(current_kp, error), fix_mul(current_ki, current_acc));
-
-  if (duty < 0) {
+  if (current_setpoint < 0) {
     motor_direction = MOTOR_REV;
   } else {
     motor_direction = MOTOR_FWD;
   }
+
+  fix32_t error = fix_sub(fix_abs(current_setpoint), current_k);
+  fix32_t next_acc = fix_add(current_acc, error);
+
+  fix32_t duty_raw =
+      fix_add(fix_mul(current_kp, error), fix_mul(current_ki, current_acc));
 
   duty = fix_clamp(duty_raw, D_MIN, D_MAX);
 
   // anti-windup for the integrator
   if (duty_raw == duty || (duty_raw >= D_MAX && error < 0) ||
       (duty_raw <= D_MIN && error > 0)) {
-    current_acc = next_acc;
+    current_acc = fix_clamp(next_acc, C_ACC_MIN, C_ACC_MAX);
   }
 
   motor_set_duty_cycle_fix(fix_abs(duty));
